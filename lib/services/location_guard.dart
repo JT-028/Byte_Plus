@@ -1,0 +1,188 @@
+// lib/services/location_guard.dart
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class LocationGuard extends StatefulWidget {
+  final Widget child;
+  final bool useMock;
+  final double? mockLat;
+  final double? mockLng;
+
+  const LocationGuard({
+    super.key,
+    required this.child,
+    this.useMock = false,
+    this.mockLat,
+    this.mockLng,
+  });
+
+  @override
+  State<LocationGuard> createState() => _LocationGuardState();
+}
+
+class _LocationGuardState extends State<LocationGuard> {
+  bool _inside = false;
+  bool _loading = true;
+  String? _error;
+  Timer? _timer;
+  Map<String, dynamic>? _cfg;
+
+  @override
+  void initState() {
+    super.initState();
+    _initService();
+  }
+
+  Future<void> _initService() async {
+    setState(() => _loading = true);
+
+    try {
+      // Load geofence settings from Firestore
+      final cfg = await FirebaseFirestore.instance
+          .collection('config')
+          .doc('app')
+          .get();
+      if (!cfg.exists) {
+        setState(() {
+          _error = "Missing Firestore /config/app document.";
+          _loading = false;
+        });
+        return;
+      }
+
+      _cfg = cfg.data();
+
+      // Ensure permissions (if not mock mode)
+      if (!widget.useMock) {
+        await _ensurePermissions();
+      }
+
+      // ✅ Check immediately once at startup
+      await _checkLocation();
+
+      // ✅ Start 15s polling while app is open
+      _startForegroundCheck();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _startForegroundCheck() {
+    _timer?.cancel();
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _checkLocation(),
+    );
+  }
+
+  Future<void> _checkLocation() async {
+    try {
+      Position pos;
+
+      // ✅ Always prioritize mock coordinates when useMock is true
+      if (widget.useMock && widget.mockLat != null && widget.mockLng != null) {
+        pos = Position(
+          latitude: widget.mockLat!,
+          longitude: widget.mockLng!,
+          timestamp: DateTime.now(),
+          accuracy: 5,
+          altitude: 0,
+          heading: 0,
+          speed: 0,
+          speedAccuracy: 0,
+          altitudeAccuracy: 0,
+          headingAccuracy: 0,
+        );
+        debugPrint(
+            "[LocationGuard] Using MOCK coordinates: (${pos.latitude}, ${pos.longitude})");
+      } else {
+        pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        debugPrint(
+            "[LocationGuard] Using REAL coordinates: (${pos.latitude}, ${pos.longitude})");
+      }
+
+      // ✅ Use Firestore config (school location)
+      final center = (_cfg?['schoolCenter'] ?? {}) as Map<String, dynamic>;
+      double radius = (_cfg?['radiusMeters'] ?? 100.0).toDouble();
+
+      final lat = (center['lat'] ?? 0).toDouble();
+      final lng = (center['lng'] ?? 0).toDouble();
+
+      // ✅ Allow wide radius in mock mode to avoid blocking while testing
+      if (widget.useMock) {
+        radius = 7000;
+      }
+
+      final distance =
+          Geolocator.distanceBetween(pos.latitude, pos.longitude, lat, lng);
+      debugPrint("[LocationGuard] Distance from allowed zone: ${distance.toStringAsFixed(2)} m (radius: $radius m)");
+
+      setState(() => _inside = distance <= radius);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _ensurePermissions() async {
+    var status = await Permission.location.status;
+    if (!status.isGranted) {
+      await Permission.locationWhenInUse.request();
+    }
+
+    if (await Permission.locationAlways.isDenied) {
+      await Permission.locationAlways.request();
+    }
+
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      await Geolocator.openLocationSettings();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Text(
+            "⚠️ Error: $_error",
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+
+    if (!_inside) {
+      return const Scaffold(
+        body: Center(
+          child: Text(
+            "🚫 You are outside the allowed area.\nAccess restricted.",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        ),
+      );
+    }
+
+    return widget.child;
+  }
+}
