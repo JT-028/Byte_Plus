@@ -71,8 +71,10 @@ class AppTextField extends StatefulWidget {
     FocusNode? focusNode,
     TextInputAction? textInputAction,
     bool enabled = true,
+    bool? obscureText,
+    VoidCallback? onToggleObscure,
     ValueChanged<String>? onChanged,
-    ValueChanged<String>? onSubmitted,
+    ValueChanged<String>? onFieldSubmitted,
     String? Function(String?)? validator,
   }) {
     return _PasswordTextField(
@@ -84,8 +86,10 @@ class AppTextField extends StatefulWidget {
       focusNode: focusNode,
       textInputAction: textInputAction,
       enabled: enabled,
+      externalObscureText: obscureText,
+      onToggleObscure: onToggleObscure,
       onChanged: onChanged,
-      onSubmitted: onSubmitted,
+      onFieldSubmitted: onFieldSubmitted,
       validator: validator,
     );
   }
@@ -211,8 +215,10 @@ class _PasswordTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final TextInputAction? textInputAction;
   final bool enabled;
+  final bool? externalObscureText;
+  final VoidCallback? onToggleObscure;
   final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onFieldSubmitted;
   final String? Function(String?)? validator;
 
   const _PasswordTextField({
@@ -224,8 +230,10 @@ class _PasswordTextField extends StatefulWidget {
     this.focusNode,
     this.textInputAction,
     this.enabled = true,
+    this.externalObscureText,
+    this.onToggleObscure,
     this.onChanged,
-    this.onSubmitted,
+    this.onFieldSubmitted,
     this.validator,
   });
 
@@ -234,7 +242,17 @@ class _PasswordTextField extends StatefulWidget {
 }
 
 class _PasswordTextFieldState extends State<_PasswordTextField> {
-  bool _isObscured = true;
+  bool _internalObscured = true;
+
+  bool get _isObscured => widget.externalObscureText ?? _internalObscured;
+
+  void _toggleVisibility() {
+    if (widget.onToggleObscure != null) {
+      widget.onToggleObscure!();
+    } else {
+      setState(() => _internalObscured = !_internalObscured);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +267,7 @@ class _PasswordTextFieldState extends State<_PasswordTextField> {
       obscureText: _isObscured,
       keyboardType: TextInputType.visiblePassword,
       onChanged: widget.onChanged,
-      onSubmitted: widget.onSubmitted,
+      onSubmitted: widget.onFieldSubmitted,
       validator: widget.validator,
       suffixIcon: IconButton(
         icon: Icon(
@@ -258,7 +276,7 @@ class _PasswordTextFieldState extends State<_PasswordTextField> {
               : Icons.visibility_outlined,
           color: AppColors.textTertiary,
         ),
-        onPressed: () => setState(() => _isObscured = !_isObscured),
+        onPressed: _toggleVisibility,
       ),
     );
   }

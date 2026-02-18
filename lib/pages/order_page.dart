@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
 
@@ -16,23 +18,30 @@ class _OrdersPageState extends State<OrdersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "My Orders",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 20),
 
-            _tabBar(),
+            _tabBar(isDark),
 
             const SizedBox(height: 12),
 
-            Expanded(child: _ordersList()),
+            Expanded(child: _ordersList(isDark)),
           ],
         ),
       ),
@@ -42,31 +51,41 @@ class _OrdersPageState extends State<OrdersPage> {
   // -------------------------------------------------------------
   // TOP TAB BAR (Active / History)
   // -------------------------------------------------------------
-  Widget _tabBar() {
+  Widget _tabBar(bool isDark) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _tabButton("Active", 0),
+        _tabButton("Active", 0, isDark),
         const SizedBox(width: 18),
-        _tabButton("History", 1),
+        _tabButton("History", 1, isDark),
       ],
     );
   }
 
-  Widget _tabButton(String label, int index) {
+  Widget _tabButton(String label, int index, bool isDark) {
     bool active = tabIndex == index;
     return GestureDetector(
       onTap: () => setState(() => tabIndex = index),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF1F41BB) : Colors.grey.shade200,
+          color:
+              active
+                  ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                  : (isDark
+                      ? AppColors.surfaceVariantDark
+                      : Colors.grey.shade200),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : Colors.black87,
+            color:
+                active
+                    ? Colors.white
+                    : (isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -77,34 +96,51 @@ class _OrdersPageState extends State<OrdersPage> {
   // -------------------------------------------------------------
   // ORDERS LIST
   // -------------------------------------------------------------
-  Widget _ordersList() {
+  Widget _ordersList(bool isDark) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("users")
-          .doc(uid)
-          .collection("orders")
-          .orderBy("timestamp", descending: true)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection("users")
+              .doc(uid)
+              .collection("orders")
+              .orderBy("timestamp", descending: true)
+              .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
+          );
         }
 
         final docs = snap.data!.docs;
 
         if (docs.isEmpty) {
-          return const Center(child: Text("No orders yet."));
+          return Center(
+            child: Text(
+              "No orders yet.",
+              style: TextStyle(
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+            ),
+          );
         }
 
-        final active = docs.where((d) {
-          final s = d["status"];
-          return s != "done" && s != "cancelled";
-        }).toList();
+        final active =
+            docs.where((d) {
+              final s = d["status"];
+              return s != "done" && s != "cancelled";
+            }).toList();
 
-        final history = docs.where((d) {
-          final s = d["status"];
-          return s == "done" || s == "cancelled";
-        }).toList();
+        final history =
+            docs.where((d) {
+              final s = d["status"];
+              return s == "done" || s == "cancelled";
+            }).toList();
 
         final showList = tabIndex == 0 ? active : history;
 
@@ -112,7 +148,13 @@ class _OrdersPageState extends State<OrdersPage> {
           return Center(
             child: Text(
               tabIndex == 0 ? "No active orders." : "No past orders.",
-              style: const TextStyle(fontSize: 15),
+              style: TextStyle(
+                fontSize: 15,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
             ),
           );
         }
@@ -122,7 +164,7 @@ class _OrdersPageState extends State<OrdersPage> {
           itemCount: showList.length,
           itemBuilder: (_, i) {
             final data = showList[i].data() as Map<String, dynamic>;
-            return _orderCard(data);
+            return _orderCard(data, isDark);
           },
         );
       },
@@ -132,47 +174,70 @@ class _OrdersPageState extends State<OrdersPage> {
   // -------------------------------------------------------------
   // ORDER CARD SUMMARY
   // -------------------------------------------------------------
-  Widget _orderCard(Map<String, dynamic> data) {
+  Widget _orderCard(Map<String, dynamic> data, bool isDark) {
     final storeName = data["storeName"];
     final total = data["total"];
     final status = data["status"];
     final items = List<Map<String, dynamic>>.from(data["items"]);
 
     return GestureDetector(
-      onTap: () => _openOrderDetails(data),
+      onTap: () => _openOrderDetails(data, isDark),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppColors.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade300),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            )
-          ],
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+          ),
+          boxShadow:
+              isDark
+                  ? []
+                  : [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.receipt_long, size: 36, color: Color(0xFF1F41BB)),
+            Icon(
+              Icons.receipt_long,
+              size: 36,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
             const SizedBox(width: 14),
 
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(storeName,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                  Text(
+                    storeName ?? '',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
 
                   const SizedBox(height: 4),
 
                   Text(
                     "${items.length} item(s)",
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -185,9 +250,15 @@ class _OrdersPageState extends State<OrdersPage> {
                 const SizedBox(height: 6),
                 Text(
                   "₱ $total",
-                  style: const TextStyle(
-                      fontSize: 15, fontWeight: FontWeight.w700),
-                )
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ],
             ),
           ],
@@ -201,46 +272,62 @@ class _OrdersPageState extends State<OrdersPage> {
   // -------------------------------------------------------------
   Widget _statusBadge(String status) {
     Color bg;
+    Color textColor;
     String label;
 
     switch (status) {
       case "to-do":
-        bg = Colors.orange.shade200;
+        bg = AppColors.warningLight;
+        textColor = AppColors.warning;
         label = "Preparing";
         break;
       case "in-progress":
-        bg = Colors.blue.shade200;
+        bg = AppColors.infoLight;
+        textColor = AppColors.info;
         label = "In Progress";
         break;
       case "ready":
-        bg = Colors.green.shade300;
+        bg = AppColors.successLight;
+        textColor = AppColors.success;
         label = "Ready";
         break;
       case "done":
-        bg = Colors.green;
+        bg = AppColors.success;
+        textColor = Colors.white;
         label = "Completed";
         break;
       case "cancelled":
-        bg = Colors.red.shade300;
+        bg = AppColors.errorLight;
+        textColor = AppColors.error;
         label = "Cancelled";
         break;
       default:
         bg = Colors.grey.shade400;
+        textColor = Colors.white;
         label = status;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Text(label,
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
     );
   }
 
   // -------------------------------------------------------------
   // OPEN ORDER DETAILS SHEET (Slide-up)
   // -------------------------------------------------------------
-  void _openOrderDetails(Map<String, dynamic> data) {
+  void _openOrderDetails(Map<String, dynamic> data, bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -251,7 +338,7 @@ class _OrdersPageState extends State<OrdersPage> {
           maxChildSize: 0.90,
           minChildSize: 0.55,
           builder: (_, controller) {
-            return _orderDetailsSheet(data, controller);
+            return _orderDetailsSheet(data, controller, isDark);
           },
         );
       },
@@ -262,7 +349,9 @@ class _OrdersPageState extends State<OrdersPage> {
   // FULL ORDER DETAIL SHEET UI
   // -------------------------------------------------------------
   Widget _orderDetailsSheet(
-      Map<String, dynamic> data, ScrollController controller) {
+    Map<String, dynamic> data,
+    ScrollController controller,
+  ) {
     final items = List<Map<String, dynamic>>.from(data["items"]);
     final status = data["status"];
     final orderId = data["orderId"];
@@ -308,8 +397,10 @@ class _OrdersPageState extends State<OrdersPage> {
 
           const SizedBox(height: 20),
 
-          const Text("Items",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          const Text(
+            "Items",
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
 
           Expanded(
@@ -319,8 +410,12 @@ class _OrdersPageState extends State<OrdersPage> {
               itemBuilder: (_, i) {
                 final item = items[i];
                 return ListTile(
-                  leading: Image.network(item["imageUrl"],
-                      width: 48, height: 48, fit: BoxFit.cover),
+                  leading: Image.network(
+                    item["imageUrl"],
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                  ),
                   title: Text(item["productName"]),
                   subtitle: Text("Qty: ${item['quantity']}"),
                   trailing: Text("₱ ${item['lineTotal']}"),
@@ -332,7 +427,7 @@ class _OrdersPageState extends State<OrdersPage> {
           if (status == "to-do") ...[
             const SizedBox(height: 16),
             _cancelButton(orderId),
-          ]
+          ],
         ],
       ),
     );
@@ -341,7 +436,7 @@ class _OrdersPageState extends State<OrdersPage> {
   // -------------------------------------------------------------
   // PROGRESS FLOW (Preparing → In Progress → Ready → Done)
   // -------------------------------------------------------------
-  Widget _statusProgress(String status) {
+  Widget _statusProgress(String status, bool isDark) {
     List<String> steps = ["to-do", "in-progress", "ready", "done"];
 
     int index = steps.indexOf(status);
@@ -361,17 +456,22 @@ class _OrdersPageState extends State<OrdersPage> {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: active ? Colors.green : Colors.grey.shade300,
+                color:
+                    active
+                        ? AppColors.success
+                        : (isDark
+                            ? AppColors.surfaceVariantDark
+                            : Colors.grey.shade300),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 i == 0
                     ? Icons.receipt_long
                     : i == 1
-                        ? Icons.local_fire_department
-                        : i == 2
-                            ? Icons.notifications_active
-                            : Icons.done_all,
+                    ? Icons.local_fire_department
+                    : i == 2
+                    ? Icons.notifications_active
+                    : Icons.done_all,
                 color: Colors.white,
                 size: 16,
               ),
@@ -381,7 +481,14 @@ class _OrdersPageState extends State<OrdersPage> {
               labels[i],
               style: TextStyle(
                 fontSize: 11,
-                color: active ? Colors.black : Colors.grey,
+                color:
+                    active
+                        ? (isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary)
+                        : (isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary),
               ),
             ),
           ],
@@ -398,13 +505,21 @@ class _OrdersPageState extends State<OrdersPage> {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.redAccent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          backgroundColor: AppColors.error,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 14),
         ),
         onPressed: () => _confirmCancel(orderId),
-        child: const Text("Cancel Order",
-            style: TextStyle(color: Colors.white, fontSize: 15)),
+        child: const Text(
+          "Cancel Order",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -413,27 +528,29 @@ class _OrdersPageState extends State<OrdersPage> {
   void _confirmCancel(String orderId) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Cancel Order?"),
-        content: const Text(
-            "Are you sure you want to cancel this order? This cannot be undone."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("No"),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _cancelOrderEverywhere(orderId);
-            },
-            child: const Text(
-              "Yes, Cancel",
-              style: TextStyle(color: Colors.red),
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Cancel Order?"),
+            content: const Text(
+              "Are you sure you want to cancel this order? This cannot be undone.",
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("No"),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _cancelOrderEverywhere(orderId);
+                },
+                child: Text(
+                  "Yes, Cancel",
+                  style: TextStyle(color: AppColors.error),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -463,7 +580,10 @@ class _OrdersPageState extends State<OrdersPage> {
     // store
     // We don't know storeId here, but order contains it
     final storeSnapshot =
-        await FirebaseFirestore.instance.collection("orders").doc(orderId).get();
+        await FirebaseFirestore.instance
+            .collection("orders")
+            .doc(orderId)
+            .get();
 
     if (storeSnapshot.exists) {
       final storeId = storeSnapshot["storeId"];

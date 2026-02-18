@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+import '../theme/app_theme.dart';
+import '../widgets/widgets.dart';
 import '../pages/register_page.dart';
+import 'forgot_password_page.dart';
+import 'splash_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,37 +16,45 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _showPassword = false;
   bool _loading = false;
 
   @override
   void dispose() {
-    emailController.dispose();
-    passwordController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> signIn() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
-      return;
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email';
     }
-
-    // Check school email format
-    if (!email.endsWith("@canteen.spcf.co")) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please use your school email")),
-      );
-      return;
+    if (!value.endsWith('@canteen.spcf.co')) {
+      return 'Please use your school email (@canteen.spcf.co)';
     }
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  }
+
+  Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
     setState(() => _loading = true);
 
@@ -51,150 +64,225 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      // ✅ IMPORTANT:
-      // DO NOT NAVIGATE ANYWHERE HERE.
-      // main.dart listens to authStateChanges + Firestore role and will route to:
-      // - AdminShell (admin)
-      // - MerchantShell (staff)
-      // - UserShell (student)
-
-    } on FirebaseAuthException {
+      // Navigate to Splash which checks auth and routes to appropriate shell
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Incorrect email or password. Try again!")),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SplashPage()),
       );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      _showError(_getFirebaseErrorMessage(e.code));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Something went wrong: $e")),
-      );
+      _showError('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  String _getFirebaseErrorMessage(String code) {
+    switch (code) {
+      case 'user-not-found':
+        return 'No account found with this email.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'invalid-email':
+        return 'Invalid email address.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      default:
+        return 'Incorrect email or password. Please try again.';
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 50),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 60),
 
-              Image.asset("assets/app/spcf_logo(white).png", width: 120),
-
-              const SizedBox(height: 16),
-              const Text(
-                "Byte Plus",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // EMAIL FIELD
-              TextField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: "School Email(with @canteen.spcf.co)",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                // Logo
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    boxShadow: AppShadows.medium,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Image.asset(
+                    'assets/app/spcf_logo(white).png',
+                    fit: BoxFit.contain,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
 
-              // PASSWORD FIELD WITH TOGGLE
-              TextField(
-                controller: passwordController,
-                obscureText: !_showPassword,
-                decoration: InputDecoration(
-                  hintText: "Password",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      _showPassword ? Icons.visibility : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() => _showPassword = !_showPassword);
-                    },
+                // App Name
+                Text(
+                  'Byte Plus',
+                  style: AppTextStyles.heading1.copyWith(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Forgot Password coming soon."),
-                      ),
-                    );
+                const SizedBox(height: AppSpacing.xs),
+
+                Text(
+                  'Sign in to continue',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.xxl),
+
+                // Email Field
+                AppTextField(
+                  controller: _emailController,
+                  label: 'School Email',
+                  hint: 'yourname@canteen.spcf.co',
+                  prefixIcon: Icon(
+                    Iconsax.sms,
+                    color:
+                        isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary,
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  validator: _validateEmail,
+                ),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // Password Field
+                AppTextField.password(
+                  controller: _passwordController,
+                  label: 'Password',
+                  hint: 'Enter your password',
+                  obscureText: !_showPassword,
+                  onToggleObscure: () {
+                    setState(() => _showPassword = !_showPassword);
                   },
-                  child: const Text(
-                    "Forgot your password?",
-                    style: TextStyle(color: Color(0xFF1F41BB)),
-                  ),
+                  textInputAction: TextInputAction.done,
+                  validator: _validatePassword,
+                  onFieldSubmitted: (_) => _signIn(),
                 ),
-              ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.sm),
 
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : signIn,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1F41BB),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                // Forgot Password
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordPage(),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Forgot your password?',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        color:
+                            isDark ? AppColors.primaryLight : AppColors.primary,
+                      ),
                     ),
                   ),
-                  child: _loading
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+                ),
+
+                const SizedBox(height: AppSpacing.xl),
+
+                // Sign In Button
+                AppButton(
+                  label: 'Sign In',
+                  onPressed: _signIn,
+                  isLoading: _loading,
+                  isFullWidth: true,
+                ),
+
+                const SizedBox(height: AppSpacing.lg),
+
+                // Create Account
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Don't have an account? ",
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterPage(),
                           ),
-                        )
-                      : const Text("Sign in", style: TextStyle(fontSize: 16)),
+                        );
+                      },
+                      child: Text(
+                        'Create Account',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color:
+                              isDark
+                                  ? AppColors.primaryLight
+                                  : AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
 
-              const SizedBox(height: 14),
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterPage()),
-                  );
-                },
-                child: const Text(
-                  "Create new account",
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ),
-
-              const SizedBox(height: 30),
-            ],
+                const SizedBox(height: AppSpacing.xxl),
+              ],
+            ),
           ),
         ),
       ),

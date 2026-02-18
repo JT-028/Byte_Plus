@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import 'favorites_page.dart';
 import 'personal_info_page.dart';
 import 'login_page.dart';
@@ -10,14 +11,14 @@ import 'login_page.dart';
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  static const kBrandBlue = Color(0xFF1F41BB);
-
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: StreamBuilder<DocumentSnapshot>(
           stream:
@@ -40,12 +41,16 @@ class ProfilePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _headerCard(
+                  context,
+                  isDark: isDark,
                   name: displayName.isEmpty ? "Unnamed User" : displayName,
                   email: email,
                 ),
                 const SizedBox(height: 14),
 
                 _listTile(
+                  context,
+                  isDark: isDark,
                   icon: Icons.favorite_border,
                   title: "Favourites",
                   onTap: () {
@@ -56,6 +61,8 @@ class ProfilePage extends StatelessWidget {
                   },
                 ),
                 _listTile(
+                  context,
+                  isDark: isDark,
                   icon: Icons.person_outline,
                   title: "Personal Info",
                   onTap: () {
@@ -75,21 +82,40 @@ class ProfilePage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     children: [
-                      const Icon(Icons.remove_red_eye_outlined, size: 22),
+                      Icon(
+                        Icons.remove_red_eye_outlined,
+                        size: 22,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
                       const SizedBox(width: 16),
-                      const Text("Dark Mode", style: TextStyle(fontSize: 15)),
+                      Text(
+                        "Dark Mode",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
                       const Spacer(),
                       Switch(
-                        value: false,
-                        activeThumbColor: kBrandBlue,
-                        onChanged: (_) {},
+                        value: isDark,
+                        activeColor:
+                            isDark ? AppColors.primaryLight : AppColors.primary,
+                        onChanged: (_) {
+                          // Theme is controlled by system - just informational
+                        },
                       ),
                     ],
                   ),
                 ),
 
                 const Spacer(),
-                _logoutButton(context),
+                _logoutButton(context, isDark),
                 const SizedBox(height: 22),
               ],
             );
@@ -99,13 +125,18 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _headerCard({required String name, required String email}) {
+  Widget _headerCard(
+    BuildContext context, {
+    required bool isDark,
+    required String name,
+    required String email,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 26),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF0F2FF),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : const Color(0xFFF0F2FF),
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(22),
           bottomRight: Radius.circular(22),
         ),
@@ -115,23 +146,31 @@ class ProfilePage extends StatelessWidget {
         children: [
           Text(
             name,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: kBrandBlue,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             email,
-            style: const TextStyle(fontSize: 13, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 13,
+              color:
+                  isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _listTile({
+  Widget _listTile(
+    BuildContext context, {
+    required bool isDark,
     required IconData icon,
     required String title,
     required VoidCallback onTap,
@@ -142,17 +181,39 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Row(
           children: [
-            Icon(icon, size: 22),
+            Icon(
+              icon,
+              size: 22,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
             const SizedBox(width: 16),
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 15))),
-            const Icon(Icons.chevron_right, size: 20),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color:
+                  isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _logoutButton(BuildContext context) {
+  Widget _logoutButton(BuildContext context, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: SizedBox(
@@ -160,11 +221,13 @@ class ProfilePage extends StatelessWidget {
         height: 48,
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
+            backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: Colors.grey.shade300),
+              side: BorderSide(
+                color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+              ),
             ),
           ),
           onPressed: () async {
@@ -177,9 +240,12 @@ class ProfilePage extends StatelessWidget {
               (route) => false,
             );
           },
-          child: const Text(
+          child: Text(
             "Log Out",
-            style: TextStyle(color: kBrandBlue, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
