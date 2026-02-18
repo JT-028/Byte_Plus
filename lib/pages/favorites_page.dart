@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+import '../theme/app_theme.dart';
 import 'store_page.dart';
 
 class FavoritesPage extends StatefulWidget {
@@ -12,58 +14,68 @@ class FavoritesPage extends StatefulWidget {
 }
 
 class _FavoritesPageState extends State<FavoritesPage> {
-  static const Color kBrandBlue = Color(0xFF1F41BB);
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection("users")
-              .doc(uid)
-              .collection("favorites")
-              .orderBy("name", descending: false)
-              .snapshots(),
+          stream:
+              FirebaseFirestore.instance
+                  .collection("users")
+                  .doc(uid)
+                  .collection("favorites")
+                  .orderBy("name", descending: false)
+                  .snapshots(),
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return _loadingSkeleton();
+              return _loadingSkeleton(isDark);
             }
 
             if (snap.hasError) {
               return Center(
                 child: Text(
                   "Something went wrong",
-                  style: TextStyle(color: Colors.red.shade400),
+                  style: TextStyle(
+                    color: isDark ? AppColors.errorLight : AppColors.error,
+                  ),
                 ),
               );
             }
 
             if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: CircularProgressIndicator(
+                  color: isDark ? AppColors.primaryLight : AppColors.primary,
+                ),
+              );
             }
 
             final docs = snap.data!.docs;
 
             // ⭐ EMPTY STATE — show browse button
             if (docs.isEmpty) {
-              return _emptyFavoritesUI();
+              return _emptyFavoritesUI(isDark);
             }
 
             // NORMAL FAVORITES LIST
             return Column(
               children: [
-                _header(),
+                _header(isDark),
                 Expanded(
                   child: ListView.builder(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     itemCount: docs.length,
                     itemBuilder: (_, i) {
                       final data = docs[i].data() as Map<String, dynamic>;
-                      return _favoriteCard(data);
+                      return _favoriteCard(data, isDark);
                     },
                   ),
                 ),
@@ -78,21 +90,26 @@ class _FavoritesPageState extends State<FavoritesPage> {
   // -------------------------------
   // HEADER
   // -------------------------------
-  Widget _header() {
+  Widget _header(bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
       child: Row(
         children: [
           GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back, size: 26),
+            child: Icon(
+              Iconsax.arrow_left,
+              size: 26,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
           ),
           const SizedBox(width: 10),
-          const Text(
+          Text(
             "Favourites",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
           ),
         ],
@@ -103,17 +120,17 @@ class _FavoritesPageState extends State<FavoritesPage> {
   // -------------------------------
   // SHIMMER-STYLE LOADING SKELETON
   // -------------------------------
-  Widget _loadingSkeleton() {
+  Widget _loadingSkeleton(bool isDark) {
     // Simple animated opacity shimmer over grey cards
     return Column(
       children: [
-        _header(),
+        _header(isDark),
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             itemCount: 4,
             itemBuilder: (_, __) {
-              return _skeletonCard();
+              return _skeletonCard(isDark);
             },
           ),
         ),
@@ -121,12 +138,12 @@ class _FavoritesPageState extends State<FavoritesPage> {
     );
   }
 
-  Widget _skeletonCard() {
+  Widget _skeletonCard(bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
+        color: isDark ? AppColors.surfaceVariantDark : Colors.grey.shade200,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -135,7 +152,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: isDark ? AppColors.surfaceDark : Colors.grey.shade300,
               borderRadius: BorderRadius.circular(16),
             ),
           ),
@@ -148,7 +165,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   height: 14,
                   width: 120,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color:
+                        isDark ? AppColors.surfaceDark : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -157,7 +175,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   height: 12,
                   width: 80,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color:
+                        isDark ? AppColors.surfaceDark : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
@@ -172,7 +191,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   // -------------------------------
   // EMPTY UI (LIKE YOUR CART EMPTY UI)
   // -------------------------------
-  Widget _emptyFavoritesUI() {
+  Widget _emptyFavoritesUI(bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -180,16 +199,19 @@ class _FavoritesPageState extends State<FavoritesPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.favorite_border,
+              Iconsax.heart,
               size: 90,
-              color: Colors.grey.shade400,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               "No favourites yet",
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -197,7 +219,10 @@ class _FavoritesPageState extends State<FavoritesPage> {
               "Add items from your favorite campus vendors",
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade600,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -212,7 +237,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   Navigator.pop(context); // back to profile / dashboard
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kBrandBlue,
+                  backgroundColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -227,7 +253,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -237,7 +263,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   // -------------------------------
   // FAVORITE CARD + SWIPE TO REMOVE
   // -------------------------------
-  Widget _favoriteCard(Map<String, dynamic> data) {
+  Widget _favoriteCard(Map<String, dynamic> data, bool isDark) {
     final storeId = data["storeId"];
     final name = data["name"] ?? "";
     final type = data["type"] ?? "";
@@ -251,11 +277,11 @@ class _FavoritesPageState extends State<FavoritesPage> {
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
-          color: Colors.red.shade400,
+          color: AppColors.error,
           borderRadius: BorderRadius.circular(20),
         ),
         alignment: Alignment.centerRight,
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Iconsax.trash, color: Colors.white),
       ),
       onDismissed: (_) async {
         await FirebaseFirestore.instance
@@ -266,20 +292,33 @@ class _FavoritesPageState extends State<FavoritesPage> {
             .delete();
       },
       child: GestureDetector(
-        onTap: () => _openStore(
-          storeId: storeId,
-          name: name,
-          type: type,
-          logoUrl: logoUrl,
-          bannerUrl: bannerUrl,
-        ),
+        onTap:
+            () => _openStore(
+              storeId: storeId,
+              name: name,
+              type: type,
+              logoUrl: logoUrl,
+              bannerUrl: bannerUrl,
+            ),
         child: Container(
           margin: const EdgeInsets.only(bottom: 14),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? AppColors.surfaceDark : Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE6E6E6)),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : const Color(0xFFE6E6E6),
+            ),
+            boxShadow:
+                isDark
+                    ? null
+                    : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
           ),
           child: Row(
             children: [
@@ -290,12 +329,23 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   width: 64,
                   height: 64,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 64,
-                    height: 64,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.store, size: 34),
-                  ),
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        width: 64,
+                        height: 64,
+                        color:
+                            isDark
+                                ? AppColors.surfaceVariantDark
+                                : Colors.grey.shade200,
+                        child: Icon(
+                          Iconsax.shop,
+                          size: 34,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -307,17 +357,24 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   children: [
                     Text(
                       name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       type,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black54,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -334,7 +391,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                       .doc(storeId)
                       .delete();
                 },
-                child: const Icon(Icons.favorite, color: Colors.red, size: 26),
+                child: Icon(Iconsax.heart, color: AppColors.error, size: 26),
               ),
             ],
           ),
@@ -371,10 +428,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
             begin: const Offset(1, 0),
             end: Offset.zero,
           ).animate(
-            CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            ),
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
           );
           return SlideTransition(position: offsetAnimation, child: child);
         },

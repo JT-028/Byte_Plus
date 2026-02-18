@@ -2,8 +2,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
+import '../services/theme_service.dart';
 import 'favorites_page.dart';
 import 'personal_info_page.dart';
 import 'login_page.dart';
@@ -102,12 +104,18 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      Switch(
-                        value: isDark,
-                        activeColor:
-                            isDark ? AppColors.primaryLight : AppColors.primary,
-                        onChanged: (_) {
-                          // Theme is controlled by system - just informational
+                      Consumer<ThemeService>(
+                        builder: (context, themeService, child) {
+                          return Switch(
+                            value: themeService.themeMode == ThemeMode.dark,
+                            activeColor:
+                                isDark
+                                    ? AppColors.primaryLight
+                                    : AppColors.primary,
+                            onChanged: (_) {
+                              themeService.toggleTheme();
+                            },
+                          );
                         },
                       ),
                     ],

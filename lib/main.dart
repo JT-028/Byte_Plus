@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:provider/provider.dart';
 
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
+import 'services/theme_service.dart';
 
 // Screens
 import 'pages/splash_page.dart';
@@ -27,11 +29,17 @@ Future<void> main() async {
   await messaging.requestPermission(alert: true, badge: true, sound: true);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const MyApp());
+  // Initialize theme service
+  final themeService = ThemeService();
+  await themeService.init();
+
+  runApp(MyApp(themeService: themeService));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final ThemeService themeService;
+
+  const MyApp({super.key, required this.themeService});
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -54,15 +62,22 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Byte Plus',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+    return ChangeNotifierProvider.value(
+      value: widget.themeService,
+      child: Consumer<ThemeService>(
+        builder: (context, themeService, child) {
+          return MaterialApp(
+            title: 'Byte Plus',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeService.themeMode,
 
-      // ✅ Start with Splash Page which handles auth check and routing
-      home: const SplashPage(),
+            // ✅ Start with Splash Page which handles auth check and routing
+            home: const SplashPage(),
+          );
+        },
+      ),
     );
   }
 }

@@ -3,6 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+import '../theme/app_theme.dart';
 
 class PersonalInfoPage extends StatefulWidget {
   const PersonalInfoPage({super.key});
@@ -26,7 +29,8 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
   Future<void> _loadUser() async {
     final uid = user.uid;
-    final snap = await FirebaseFirestore.instance.collection("users").doc(uid).get();
+    final snap =
+        await FirebaseFirestore.instance.collection("users").doc(uid).get();
 
     final data = snap.data() ?? {};
     nameCtrl.text = data["name"] ?? "";
@@ -91,7 +95,10 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor:
+          Theme.of(context).brightness == Brightness.dark
+              ? AppColors.surfaceDark
+              : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
@@ -111,10 +118,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                 children: [
                   const Text(
                     "Change Password",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 20),
 
@@ -129,9 +133,10 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                         icon: Icon(
                           showCurrent ? Icons.visibility : Icons.visibility_off,
                         ),
-                        onPressed: () => modalSetState(() {
-                          showCurrent = !showCurrent;
-                        }),
+                        onPressed:
+                            () => modalSetState(() {
+                              showCurrent = !showCurrent;
+                            }),
                       ),
                     ),
                   ),
@@ -148,9 +153,10 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                         icon: Icon(
                           showNew ? Icons.visibility : Icons.visibility_off,
                         ),
-                        onPressed: () => modalSetState(() {
-                          showNew = !showNew;
-                        }),
+                        onPressed:
+                            () => modalSetState(() {
+                              showNew = !showNew;
+                            }),
                       ),
                     ),
                   ),
@@ -167,9 +173,10 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                         icon: Icon(
                           showConfirm ? Icons.visibility : Icons.visibility_off,
                         ),
-                        onPressed: () => modalSetState(() {
-                          showConfirm = !showConfirm;
-                        }),
+                        onPressed:
+                            () => modalSetState(() {
+                              showConfirm = !showConfirm;
+                            }),
                       ),
                     ),
                   ),
@@ -268,17 +275,21 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    const brandBlue = Color(0xFF1F41BB);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        title: const Text(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        foregroundColor:
+            isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+        title: Text(
           "Personal Info",
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -344,21 +355,25 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               child: ElevatedButton(
                 onPressed: saving ? null : _saveProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: brandBlue,
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.primaryLight
+                          : AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
-                child: saving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Save",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                child:
+                    saving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                          "Save",
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
               ),
             ),
 
@@ -371,17 +386,26 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               child: OutlinedButton(
                 onPressed: _showChangePasswordSheet,
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: brandBlue, width: 1.4),
+                  side: BorderSide(
+                    color:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.primaryLight
+                            : AppColors.primary,
+                    width: 1.4,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
+                child: Text(
                   "Change Password",
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: brandBlue,
+                    color:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.primaryLight
+                            : AppColors.primary,
                   ),
                 ),
               ),
