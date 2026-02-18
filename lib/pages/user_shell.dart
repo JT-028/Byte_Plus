@@ -2,7 +2,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
+import '../theme/app_theme.dart';
 import '../services/order_service.dart';
 import '../services/cart_service.dart';
 import 'store_page.dart';
@@ -35,20 +37,22 @@ class _UserShellState extends State<UserShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: kBrandBlue,
+      backgroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
       body: SafeArea(
         child: IndexedStack(
           index: selectedNav,
           children: [
-            _dashboardUI(),
+            _dashboardUI(isDark),
             CartPage(onBrowse: () => setState(() => selectedNav = 0)),
-            OrdersPage(),
-            ProfilePage(),
+            const OrdersPage(),
+            const ProfilePage(),
           ],
         ),
       ),
-      bottomNavigationBar: _bottomNav(),
+      bottomNavigationBar: _bottomNav(isDark),
     );
   }
 
@@ -56,7 +60,7 @@ class _UserShellState extends State<UserShell> {
   // DASHBOARD UI
   // ---------------------------------------------------------------------------
 
-  Widget _dashboardUI() {
+  Widget _dashboardUI(bool isDark) {
     return Stack(
       children: [
         Positioned(
@@ -64,31 +68,40 @@ class _UserShellState extends State<UserShell> {
           left: 0,
           right: 0,
           height: 300,
-          child: Container(color: kBrandBlue),
+          child: Container(
+            color: isDark ? AppColors.primaryLight : AppColors.primary,
+          ),
         ),
         Positioned.fill(
           top: 240,
           child: Container(
-            decoration: const BoxDecoration(
-              color: kPageBg,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.backgroundDark : AppColors.background,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(32),
+              ),
             ),
             child: Column(
               children: [
                 const SizedBox(height: 35),
-                _categoriesBar(),
+                _categoriesBar(isDark),
                 const SizedBox(height: 14),
-                Expanded(child: _storeList()),
+                Expanded(child: _storeList(isDark)),
               ],
             ),
           ),
         ),
-        Positioned(top: 0, left: 0, right: 0, child: _topHeaderWithSearch()),
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: _topHeaderWithSearch(isDark),
+        ),
       ],
     );
   }
 
-  Widget _topHeaderWithSearch() {
+  Widget _topHeaderWithSearch(bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 34, 24, 0),
       child: Column(
@@ -97,7 +110,7 @@ class _UserShellState extends State<UserShell> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -109,22 +122,41 @@ class _UserShellState extends State<UserShell> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
                       "What are you craving?",
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(width: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Image.network(
-                  "https://res.cloudinary.com/ddhamh7cy/image/upload/v1763312250/spcf_logo_wgqxdg.jpg",
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: Image.network(
+                    "https://res.cloudinary.com/ddhamh7cy/image/upload/v1763312250/spcf_logo_wgqxdg.jpg",
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 48,
+                          height: 48,
+                          color: Colors.white.withOpacity(0.2),
+                          child: const Icon(Iconsax.user, color: Colors.white),
+                        ),
+                  ),
                 ),
               ),
             ],
@@ -132,15 +164,39 @@ class _UserShellState extends State<UserShell> {
           const SizedBox(height: 18),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: const TextField(
+            child: TextField(
               decoration: InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: "Search",
+                prefixIcon: Icon(
+                  Iconsax.search_normal,
+                  color:
+                      isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+                hintText: "Search stores or food...",
+                hintStyle: TextStyle(
+                  color:
+                      isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                  fontSize: 14,
+                ),
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              style: TextStyle(
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
           ),
@@ -149,31 +205,50 @@ class _UserShellState extends State<UserShell> {
     );
   }
 
-  Widget _categoriesBar() {
+  Widget _categoriesBar(bool isDark) {
     return SizedBox(
-      height: 40,
+      height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, i) {
           bool selected = selectedCategory == i;
 
           return GestureDetector(
             onTap: () => setState(() => selectedCategory = i),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? kBrandBlue : Colors.white,
-                borderRadius: BorderRadius.circular(24),
+                color:
+                    selected
+                        ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                        : (isDark ? AppColors.surfaceDark : Colors.white),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow:
+                    selected
+                        ? [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                        : null,
               ),
               child: Text(
                 categories[i],
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: selected ? Colors.white : Colors.black87,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color:
+                      selected
+                          ? Colors.white
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary),
                 ),
               ),
             ),
@@ -183,13 +258,15 @@ class _UserShellState extends State<UserShell> {
     );
   }
 
-  Widget _storeList() {
+  Widget _storeList(bool isDark) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection("stores").snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(color: kBrandBlue),
+          return Center(
+            child: CircularProgressIndicator(
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
           );
         }
 
@@ -206,7 +283,32 @@ class _UserShellState extends State<UserShell> {
         }
 
         if (docs.isEmpty) {
-          return const Center(child: Text("No stores found."));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Iconsax.shop,
+                  size: 64,
+                  color:
+                      isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "No stores found",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -223,6 +325,7 @@ class _UserShellState extends State<UserShell> {
               prepTime: data["prepTime"] ?? "",
               logoUrl: data["logoUrl"] ?? "",
               bannerUrl: data["bannerUrl"] ?? "",
+              isDark: isDark,
             );
           },
         );
@@ -238,6 +341,7 @@ class _UserShellState extends State<UserShell> {
     required String prepTime,
     required String logoUrl,
     required String bannerUrl,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: () {
@@ -257,22 +361,56 @@ class _UserShellState extends State<UserShell> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE6E6E6)),
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                logoUrl,
-                width: 64,
-                height: 64,
-                fit: BoxFit.cover,
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.network(
+                  logoUrl,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (_, __, ___) => Container(
+                        width: 64,
+                        height: 64,
+                        color:
+                            isDark
+                                ? AppColors.surfaceVariantDark
+                                : Colors.grey.shade200,
+                        child: Icon(
+                          Iconsax.shop,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -283,30 +421,46 @@ class _UserShellState extends State<UserShell> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     type,
-                    style: const TextStyle(fontSize: 13, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
-                        Icons.access_time,
+                      Icon(
+                        Iconsax.clock,
                         size: 14,
-                        color: Colors.grey,
+                        color:
+                            isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         prepTime,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
                         ),
                       ),
                     ],
@@ -334,10 +488,28 @@ class _UserShellState extends State<UserShell> {
                         logoUrl,
                         bannerUrl,
                       ),
-                  child: Icon(
-                    isFav ? Icons.favorite : Icons.favorite_border,
-                    color: isFav ? Colors.red : Colors.grey,
-                    size: 26,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color:
+                          isFav
+                              ? AppColors.error.withOpacity(0.1)
+                              : (isDark
+                                  ? AppColors.surfaceVariantDark
+                                  : Colors.grey.shade100),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isFav ? Iconsax.heart : Iconsax.heart,
+                      color:
+                          isFav
+                              ? AppColors.error
+                              : (isDark
+                                  ? AppColors.textTertiaryDark
+                                  : Colors.grey),
+                      size: 22,
+                    ),
                   ),
                 );
               },
@@ -375,28 +547,105 @@ class _UserShellState extends State<UserShell> {
     }
   }
 
-  Widget _bottomNav() {
+  Widget _bottomNav(bool isDark) {
     return Container(
-      height: 70,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 36),
+      height: 80,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _navItem(icon: Icons.restaurant, index: 0),
-          _navItem(icon: Icons.shopping_cart_outlined, index: 1),
-          _navItem(icon: Icons.receipt_long, index: 2),
-          _navItem(icon: Icons.person_outline, index: 3),
+          _navItem(
+            icon: Iconsax.home_2,
+            activeIcon: Iconsax.home_2,
+            label: "Home",
+            index: 0,
+            isDark: isDark,
+          ),
+          _navItem(
+            icon: Iconsax.shopping_cart,
+            activeIcon: Iconsax.shopping_cart,
+            label: "Cart",
+            index: 1,
+            isDark: isDark,
+          ),
+          _navItem(
+            icon: Iconsax.receipt_2,
+            activeIcon: Iconsax.receipt_2,
+            label: "Orders",
+            index: 2,
+            isDark: isDark,
+          ),
+          _navItem(
+            icon: Iconsax.user,
+            activeIcon: Iconsax.user,
+            label: "Profile",
+            index: 3,
+            isDark: isDark,
+          ),
         ],
       ),
     );
   }
 
-  Widget _navItem({required IconData icon, required int index}) {
+  Widget _navItem({
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int index,
+    required bool isDark,
+  }) {
     bool active = selectedNav == index;
     return GestureDetector(
       onTap: () => setState(() => selectedNav = index),
-      child: Icon(icon, size: 24, color: active ? kBrandBlue : Colors.grey),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color:
+              active
+                  ? (isDark
+                      ? AppColors.primaryLight.withOpacity(0.2)
+                      : AppColors.primary.withOpacity(0.1))
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              active ? activeIcon : icon,
+              size: 24,
+              color:
+                  active
+                      ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                      : (isDark ? AppColors.textTertiaryDark : Colors.grey),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                color:
+                    active
+                        ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                        : (isDark ? AppColors.textTertiaryDark : Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -415,7 +664,6 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  static const Color kBrandBlue = Color(0xFF1F41BB);
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   bool pickupNow = true;
@@ -423,18 +671,24 @@ class _CartPageState extends State<CartPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: StreamBuilder<QuerySnapshot>(
           stream: CartService.streamCart(),
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return Center(
+                child: CircularProgressIndicator(
+                  color: isDark ? AppColors.primaryLight : AppColors.primary,
+                ),
+              );
             }
 
             if (!snap.hasData || snap.data!.docs.isEmpty) {
-              return _emptyCart();
+              return _emptyCart(isDark);
             }
 
             final docs = snap.data!.docs;
@@ -455,22 +709,31 @@ class _CartPageState extends State<CartPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "Your Cart",
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        _pickupSection(),
-                        const SizedBox(height: 16),
-                        _orderDetailsSection(docs),
+                        const SizedBox(height: 20),
+                        _pickupSection(isDark),
+                        const SizedBox(height: 20),
+                        _orderDetailsSection(docs, isDark),
                       ],
                     ),
                   ),
                 ),
-                _bottomTotalBar(total: total, firstItem: first, docs: docs),
+                _bottomTotalBar(
+                  total: total,
+                  firstItem: first,
+                  docs: docs,
+                  isDark: isDark,
+                ),
               ],
             );
           },
@@ -479,27 +742,48 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _emptyCart() {
+  Widget _emptyCart(bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.shopping_bag_outlined,
-              size: 90,
-              color: Colors.grey.shade400,
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color:
+                    isDark
+                        ? AppColors.primaryLight.withOpacity(0.1)
+                        : AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Iconsax.shopping_bag,
+                size: 64,
+                color: isDark ? AppColors.primaryLight : AppColors.primary,
+              ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               "Hungry?",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               "Add items from your favorite campus vendors",
-              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 14,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 28),
@@ -509,9 +793,10 @@ class _CartPageState extends State<CartPage> {
               child: ElevatedButton(
                 onPressed: widget.onBrowse,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kBrandBlue,
+                  backgroundColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
@@ -531,26 +816,46 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _pickupSection() {
+  Widget _pickupSection(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
+        color: isDark ? AppColors.surfaceDark : const Color(0xFFF7F7F7),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+        ),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Choose pick up time",
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          Row(
+            children: [
+              Icon(
+                Iconsax.clock,
+                size: 18,
+                color: isDark ? AppColors.primaryLight : AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Choose pick up time",
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _pickupOption(
             title: "Pick up now",
             subtitle: "Estimated ready in 5–10 mins.",
             selected: pickupNow,
+            isDark: isDark,
             onTap: () {
               setState(() {
                 pickupNow = true;
@@ -558,7 +863,7 @@ class _CartPageState extends State<CartPage> {
               });
             },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _pickupOption(
             title: "Pick up later",
             subtitle:
@@ -566,7 +871,15 @@ class _CartPageState extends State<CartPage> {
                     ? "Set your pick up time."
                     : "Scheduled: ${pickupTime!.hour.toString().padLeft(2, '0')}:${pickupTime!.minute.toString().padLeft(2, '0')}",
             selected: !pickupNow,
-            trailing: const Icon(Icons.chevron_right),
+            isDark: isDark,
+            trailing: Icon(
+              Iconsax.arrow_right_3,
+              size: 18,
+              color:
+                  isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
             onTap: () async {
               final now = DateTime.now();
               final timeOfDay = await showTimePicker(
@@ -599,44 +912,67 @@ class _CartPageState extends State<CartPage> {
     required String title,
     required String subtitle,
     required bool selected,
+    required bool isDark,
     Widget? trailing,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : const Color(0xFFF5F5F5),
+          color:
+              selected
+                  ? (isDark ? AppColors.surfaceDark : Colors.white)
+                  : (isDark
+                      ? AppColors.surfaceVariantDark
+                      : const Color(0xFFF5F5F5)),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? kBrandBlue : Colors.grey.shade300,
-            width: selected ? 1.4 : 1,
+            color:
+                selected
+                    ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                    : (isDark ? AppColors.borderDark : Colors.grey.shade300),
+            width: selected ? 2 : 1,
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
           children: [
             Icon(
-              selected ? Icons.check_circle : Icons.circle_outlined,
-              size: 20,
-              color: selected ? kBrandBlue : Colors.grey,
+              selected ? Iconsax.tick_circle : Iconsax.record,
+              size: 22,
+              color:
+                  selected
+                      ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                      : (isDark ? AppColors.textTertiaryDark : Colors.grey),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -648,45 +984,85 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _orderDetailsSection(List<QueryDocumentSnapshot> docs) {
+  Widget _orderDetailsSection(List<QueryDocumentSnapshot> docs, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            const Text(
+            Icon(
+              Iconsax.receipt_item,
+              size: 18,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
               "Order Details",
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
             ),
             const Spacer(),
             GestureDetector(
               onTap: widget.onBrowse,
-              child: const Text(
-                "Add Items",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: kBrandBlue,
-                  decoration: TextDecoration.underline,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      isDark
+                          ? AppColors.primaryLight.withOpacity(0.1)
+                          : AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Iconsax.add,
+                      size: 16,
+                      color:
+                          isDark ? AppColors.primaryLight : AppColors.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      "Add Items",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color:
+                            isDark ? AppColors.primaryLight : AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.grey.shade300),
+            color: isDark ? AppColors.surfaceDark : const Color(0xFFF7F7F7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+            ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: docs.map((d) => _cartRow(d)).toList()),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: docs.map((d) => _cartRow(d, isDark)).toList(),
+          ),
         ),
       ],
     );
   }
 
-  Widget _cartRow(QueryDocumentSnapshot doc) {
+  Widget _cartRow(QueryDocumentSnapshot doc, bool isDark) {
     final data = doc.data() as Map<String, dynamic>;
     final productName = data['productName'] ?? '';
     final imageUrl = data['imageUrl'] ?? '';
@@ -705,9 +1081,9 @@ class _CartPageState extends State<CartPage> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.surfaceVariantDark : Colors.white,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -716,32 +1092,52 @@ class _CartPageState extends State<CartPage> {
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
               imageUrl,
-              width: 48,
-              height: 48,
+              width: 52,
+              height: 52,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 48),
+              errorBuilder:
+                  (_, __, ___) => Container(
+                    width: 52,
+                    height: 52,
+                    color: isDark ? AppColors.borderDark : Colors.grey.shade200,
+                    child: Icon(
+                      Iconsax.image,
+                      size: 24,
+                      color:
+                          isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiary,
+                    ),
+                  ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   productName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
                 if (subtitle.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 3),
                     child: Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -753,18 +1149,27 @@ class _CartPageState extends State<CartPage> {
           // QUANTITY STEPPER
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+              ),
             ),
             child: Row(
               children: [
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
-                    minWidth: 30,
-                    minHeight: 30,
+                    minWidth: 32,
+                    minHeight: 32,
                   ),
-                  icon: const Icon(Icons.remove, size: 16),
+                  icon: Icon(
+                    Iconsax.minus,
+                    size: 16,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
                   onPressed:
                       () => CartService.updateQuantity(
                         itemId: doc.id,
@@ -772,14 +1177,28 @@ class _CartPageState extends State<CartPage> {
                         unitPrice: unitPrice,
                       ),
                 ),
-                Text(qty.toString(), style: const TextStyle(fontSize: 14)),
+                Text(
+                  qty.toString(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
                 IconButton(
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
-                    minWidth: 30,
-                    minHeight: 30,
+                    minWidth: 32,
+                    minHeight: 32,
                   ),
-                  icon: const Icon(Icons.add, size: 16),
+                  icon: Icon(
+                    Iconsax.add,
+                    size: 16,
+                    color: isDark ? AppColors.primaryLight : AppColors.primary,
+                  ),
                   onPressed:
                       () => CartService.updateQuantity(
                         itemId: doc.id,
@@ -793,8 +1212,12 @@ class _CartPageState extends State<CartPage> {
 
           const SizedBox(width: 12),
           Text(
-            "₱ ${lineTotal.toStringAsFixed(0)}",
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            "\u20b1 ${lineTotal.toStringAsFixed(0)}",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -806,12 +1229,20 @@ class _CartPageState extends State<CartPage> {
     required double total,
     required Map<String, dynamic> firstItem,
     required List<QueryDocumentSnapshot> docs,
+    required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -819,16 +1250,26 @@ class _CartPageState extends State<CartPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Total",
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-                const SizedBox(height: 2),
                 Text(
-                  "₱ ${total.toStringAsFixed(0)}",
-                  style: const TextStyle(
-                    fontSize: 16,
+                  "Total",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "\u20b1 ${total.toStringAsFixed(0)}",
+                  style: TextStyle(
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -837,13 +1278,15 @@ class _CartPageState extends State<CartPage> {
 
           Expanded(
             child: SizedBox(
-              height: 46,
+              height: 50,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kBrandBlue,
+                  backgroundColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
+                  elevation: 0,
                 ),
                 onPressed: () async {
                   try {
@@ -891,21 +1334,48 @@ class _CartPageState extends State<CartPage> {
 
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Order placed successfully"),
+                      SnackBar(
+                        content: const Text("Order placed successfully!"),
+                        backgroundColor: AppColors.success,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     );
                   } catch (e) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Failed to place order: $e")),
+                      SnackBar(
+                        content: Text("Failed to place order: $e"),
+                        backgroundColor: AppColors.error,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     );
                   }
                 },
 
-                child: const Text(
-                  "Place Order",
-                  style: TextStyle(fontSize: 15, color: Colors.white),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Iconsax.shopping_bag,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      "Place Order",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

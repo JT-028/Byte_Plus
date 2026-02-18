@@ -3,6 +3,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+
+import '../theme/app_theme.dart';
 
 class ProductPage extends StatefulWidget {
   final String storeId;
@@ -160,30 +163,39 @@ class _ProductPageState extends State<ProductPage> {
   @override
   Widget build(BuildContext context) {
     if (doc == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: isDark ? AppColors.primaryLight : AppColors.primary,
+          ),
+        ),
+      );
     }
 
     final data = doc!.data() as Map<String, dynamic>;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: CustomScrollView(
                 slivers: [
-                  _sliverHeader(data),
+                  _sliverHeader(data, isDark),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                      child: _buildBody(data),
+                      child: _buildBody(data, isDark),
                     ),
                   ),
                 ],
               ),
             ),
-            _bottomBar(),
+            _bottomBar(isDark),
           ],
         ),
       ),
@@ -193,26 +205,46 @@ class _ProductPageState extends State<ProductPage> {
   // ------------------------------------------------------------
   // HEADER
   // ------------------------------------------------------------
-  SliverAppBar _sliverHeader(Map data) {
+  SliverAppBar _sliverHeader(Map data, bool isDark) {
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 260,
-      backgroundColor: Colors.white,
+      expandedHeight: 280,
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       elevation: 0,
       leading: GestureDetector(
         onTap: () => Navigator.pop(context),
-        child: const Padding(
-          padding: EdgeInsets.all(12),
-          child: CircleAvatar(
-            backgroundColor: Colors.white,
-            child: Icon(Icons.close, color: Colors.black),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceVariantDark : Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              Iconsax.close_circle,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              size: 24,
+            ),
           ),
         ),
       ),
       title: AnimatedOpacity(
         opacity: collapsed ? 1 : 0,
         duration: const Duration(milliseconds: 200),
-        child: Text(data["name"], style: const TextStyle(color: Colors.black)),
+        child: Text(
+          data["name"] ?? '',
+          style: TextStyle(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       flexibleSpace: LayoutBuilder(
         builder: (context, c) {
@@ -227,9 +259,18 @@ class _ProductPageState extends State<ProductPage> {
           return FlexibleSpaceBar(
             background: Center(
               child: Image.network(
-                data["imageUrl"],
+                data["imageUrl"] ?? '',
                 height: 220,
                 fit: BoxFit.contain,
+                errorBuilder:
+                    (_, __, ___) => Icon(
+                      Iconsax.image,
+                      size: 64,
+                      color:
+                          isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiary,
+                    ),
               ),
             ),
           );
@@ -241,23 +282,27 @@ class _ProductPageState extends State<ProductPage> {
   // ------------------------------------------------------------
   // BODY
   // ------------------------------------------------------------
-  Widget _buildBody(Map data) {
+  Widget _buildBody(Map data, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          data["name"],
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          data["name"] ?? '',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
         ),
         const SizedBox(height: 6),
 
         // PRICE DISPLAY (FIXED)
         Text(
           "₱$appliedSizePrice",
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.blue,
+            color: isDark ? AppColors.primaryLight : AppColors.primary,
           ),
         ),
 
@@ -267,21 +312,37 @@ class _ProductPageState extends State<ProductPage> {
         if (data["description"] != null)
           Text(
             data["description"],
-            style: const TextStyle(fontSize: 14, color: Colors.black54),
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
           ),
 
         const SizedBox(height: 25),
 
         // SIZE REQUIRED
-        _sectionTitle("Size", required: true, keyName: "size"),
+        _sectionTitle("Size", required: true, keyName: "size", isDark: isDark),
         _container(
           Column(
-            children: List.generate(data["size"].length, (i) {
+            children: List.generate(data["size"]?.length ?? 0, (i) {
               final s = data["size"][i];
               return RadioListTile(
-                title: Text("${s["name"]}  (₱${s["price"]})"),
+                title: Text(
+                  "${s["name"]}  (₱${s["price"]})",
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
                 value: s["name"],
                 groupValue: selectedSize,
+                activeColor:
+                    isDark ? AppColors.primaryLight : AppColors.primary,
                 onChanged: (v) {
                   setState(() {
                     selectedSize = v.toString();
@@ -291,56 +352,116 @@ class _ProductPageState extends State<ProductPage> {
               );
             }),
           ),
+          isDark,
         ),
 
         const SizedBox(height: 25),
 
         // SUGAR REQUIRED
-        _sectionTitle("Sugar Level", required: true, keyName: "sugar"),
+        _sectionTitle(
+          "Sugar Level",
+          required: true,
+          keyName: "sugar",
+          isDark: isDark,
+        ),
         _container(
           Wrap(
             spacing: 10,
-            children: List.generate(data["sugarOptions"].length, (i) {
+            runSpacing: 10,
+            children: List.generate(data["sugarOptions"]?.length ?? 0, (i) {
               final opt = data["sugarOptions"][i];
+              final isSelected = selectedSugar == opt;
               return ChoiceChip(
-                label: Text(opt),
-                selected: selectedSugar == opt,
+                label: Text(
+                  opt,
+                  style: TextStyle(
+                    color:
+                        isSelected
+                            ? Colors.white
+                            : (isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary),
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor:
+                    isDark ? AppColors.primaryLight : AppColors.primary,
+                backgroundColor:
+                    isDark
+                        ? AppColors.surfaceVariantDark
+                        : Colors.grey.shade200,
                 onSelected: (_) => setState(() => selectedSugar = opt),
               );
             }),
           ),
+          isDark,
         ),
 
         const SizedBox(height: 25),
 
         // ICE REQUIRED
-        _sectionTitle("Ice Level", required: true, keyName: "ice"),
+        _sectionTitle(
+          "Ice Level",
+          required: true,
+          keyName: "ice",
+          isDark: isDark,
+        ),
         _container(
           Wrap(
             spacing: 10,
-            children: List.generate(data["iceOptions"].length, (i) {
+            runSpacing: 10,
+            children: List.generate(data["iceOptions"]?.length ?? 0, (i) {
               final opt = data["iceOptions"][i];
+              final isSelected = selectedIce == opt;
               return ChoiceChip(
-                label: Text(opt),
-                selected: selectedIce == opt,
+                label: Text(
+                  opt,
+                  style: TextStyle(
+                    color:
+                        isSelected
+                            ? Colors.white
+                            : (isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary),
+                  ),
+                ),
+                selected: isSelected,
+                selectedColor:
+                    isDark ? AppColors.primaryLight : AppColors.primary,
+                backgroundColor:
+                    isDark
+                        ? AppColors.surfaceVariantDark
+                        : Colors.grey.shade200,
                 onSelected: (_) => setState(() => selectedIce = opt),
               );
             }),
           ),
+          isDark,
         ),
 
         const SizedBox(height: 25),
 
         // TOPPINGS OPTIONAL
-        _sectionTitle("Toppings"),
+        _sectionTitle("Toppings", isDark: isDark),
         _container(
           Column(
-            children: List.generate(data["toppings"].length, (i) {
+            children: List.generate(data["toppings"]?.length ?? 0, (i) {
               final t = data["toppings"][i];
               final added = selectedToppings.any((x) => x["name"] == t["name"]);
               return CheckboxListTile(
-                title: Text("${t["name"]}  (+₱${t["price"]})"),
+                title: Text(
+                  "${t["name"]}  (+₱${t["price"]})",
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
                 value: added,
+                activeColor:
+                    isDark ? AppColors.primaryLight : AppColors.primary,
+                checkColor: Colors.white,
                 onChanged: (v) {
                   setState(() {
                     if (v == true) {
@@ -359,20 +480,31 @@ class _ProductPageState extends State<ProductPage> {
               );
             }),
           ),
+          isDark,
         ),
 
         const SizedBox(height: 25),
 
-        _sectionTitle("Note to Vendor"),
+        _sectionTitle("Note to Vendor", isDark: isDark),
         _container(
           TextField(
             controller: noteCtrl,
             maxLines: 2,
-            decoration: const InputDecoration(
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
+            decoration: InputDecoration(
               border: InputBorder.none,
               hintText: "Add your request (optional)",
+              hintStyle: TextStyle(
+                color:
+                    isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiary,
+              ),
             ),
           ),
+          isDark,
         ),
 
         const SizedBox(height: 140),
@@ -387,6 +519,7 @@ class _ProductPageState extends State<ProductPage> {
     String text, {
     bool required = false,
     String keyName = "",
+    required bool isDark,
   }) {
     bool done = required ? isCompleted(keyName) : false;
 
@@ -395,19 +528,35 @@ class _ProductPageState extends State<ProductPage> {
       children: [
         Text(
           text,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
         ),
         if (required)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: done ? Colors.grey.shade300 : Colors.blue.shade50,
+              color:
+                  done
+                      ? (isDark
+                          ? AppColors.surfaceVariantDark
+                          : Colors.grey.shade300)
+                      : (isDark
+                          ? AppColors.primary.withOpacity(0.2)
+                          : Colors.blue.shade50),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               done ? "Completed" : "Required",
               style: TextStyle(
-                color: done ? Colors.black54 : Colors.blue,
+                color:
+                    done
+                        ? (isDark
+                            ? AppColors.textSecondaryDark
+                            : Colors.black54)
+                        : (isDark ? AppColors.primaryLight : AppColors.primary),
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
@@ -417,25 +566,29 @@ class _ProductPageState extends State<ProductPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.grey.shade200,
+              color:
+                  isDark ? AppColors.surfaceVariantDark : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Text(
+            child: Text(
               "Optional",
-              style: TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(
+                fontSize: 12,
+                color: isDark ? AppColors.textSecondaryDark : Colors.black54,
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _container(Widget child) {
+  Widget _container(Widget child, bool isDark) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: isDark ? AppColors.surfaceVariantDark : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
       ),
       child: child,
@@ -445,17 +598,17 @@ class _ProductPageState extends State<ProductPage> {
   // ------------------------------------------------------------
   // BOTTOM BAR
   // ------------------------------------------------------------
-  Widget _bottomBar() {
+  Widget _bottomBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: isDark ? Colors.black26 : Colors.black12,
             blurRadius: 5,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -465,24 +618,42 @@ class _ProductPageState extends State<ProductPage> {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade400),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : Colors.grey.shade400,
+              ),
             ),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.remove),
+                  icon: Icon(
+                    Iconsax.minus,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
                   onPressed:
                       quantity > 1 ? () => setState(() => quantity--) : null,
                 ),
                 Text(
                   "$quantity",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.add),
+                  icon: Icon(
+                    Iconsax.add,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
                   onPressed: () => setState(() => quantity++),
                 ),
               ],
@@ -501,8 +672,15 @@ class _ProductPageState extends State<ProductPage> {
                       ? addToCart
                       : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF375DFB),
-                disabledBackgroundColor: Colors.grey.shade300,
+                backgroundColor:
+                    isDark ? AppColors.primaryLight : AppColors.primary,
+                disabledBackgroundColor:
+                    isDark
+                        ? AppColors.surfaceVariantDark
+                        : Colors.grey.shade300,
+                foregroundColor: Colors.white,
+                disabledForegroundColor:
+                    isDark ? AppColors.textTertiaryDark : Colors.grey.shade500,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),

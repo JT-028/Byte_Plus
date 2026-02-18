@@ -351,15 +351,16 @@ class _OrdersPageState extends State<OrdersPage> {
   Widget _orderDetailsSheet(
     Map<String, dynamic> data,
     ScrollController controller,
+    bool isDark,
   ) {
     final items = List<Map<String, dynamic>>.from(data["items"]);
     final status = data["status"];
     final orderId = data["orderId"];
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -371,7 +372,7 @@ class _OrdersPageState extends State<OrdersPage> {
               width: 55,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: isDark ? AppColors.borderDark : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
@@ -381,25 +382,38 @@ class _OrdersPageState extends State<OrdersPage> {
 
           Text(
             data["storeName"],
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
           ),
 
           const SizedBox(height: 6),
 
           Text(
             "Order #$orderId",
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(
+              color:
+                  isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
           ),
 
           const SizedBox(height: 14),
 
-          _statusProgress(status),
+          _statusProgress(status, isDark),
 
           const SizedBox(height: 20),
 
-          const Text(
+          Text(
             "Items",
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
 
@@ -416,9 +430,34 @@ class _OrdersPageState extends State<OrdersPage> {
                     height: 48,
                     fit: BoxFit.cover,
                   ),
-                  title: Text(item["productName"]),
-                  subtitle: Text("Qty: ${item['quantity']}"),
-                  trailing: Text("₱ ${item['lineTotal']}"),
+                  title: Text(
+                    item["productName"],
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "Qty: ${item['quantity']}",
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
+                  ),
+                  trailing: Text(
+                    "₱ ${item['lineTotal']}",
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 );
               },
             ),
