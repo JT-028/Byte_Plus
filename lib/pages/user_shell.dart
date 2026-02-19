@@ -7,6 +7,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/order_service.dart';
 import '../services/cart_service.dart';
+import '../utils/responsive_utils.dart';
 import 'store_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
@@ -308,6 +309,41 @@ class _UserShellState extends State<UserShell> {
           );
         }
 
+        final responsive = ResponsiveUtils.of(context);
+        final isTabletOrLarger = !responsive.isMobile;
+
+        // Use grid layout for tablets and larger screens
+        if (isTabletOrLarger) {
+          return GridView.builder(
+            padding: EdgeInsets.symmetric(
+              horizontal: responsive.horizontalPadding,
+              vertical: 12,
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: responsive.value(mobile: 1, tablet: 2, desktop: 3),
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 14,
+              childAspectRatio: 2.8,
+            ),
+            itemCount: docs.length,
+            itemBuilder: (_, i) {
+              final doc = docs[i];
+              final data = doc.data() as Map<String, dynamic>;
+
+              return _storeCard(
+                storeId: doc.id,
+                name: data["name"] ?? "",
+                type: data["type"] ?? "",
+                prepTime: data["prepTime"] ?? "",
+                logoUrl: data["logoUrl"] ?? "",
+                bannerUrl: data["bannerUrl"] ?? "",
+                isDark: isDark,
+                isGridItem: true,
+              );
+            },
+          );
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           itemCount: docs.length,
@@ -339,38 +375,43 @@ class _UserShellState extends State<UserShell> {
     required String logoUrl,
     required String bannerUrl,
     required bool isDark,
+    bool isGridItem = false,
   }) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (_) => StorePage(
-                  storeId: storeId,
-                  name: name,
-                  type: type,
-                  prepTime: prepTime,
-                  logoUrl: logoUrl,
-                  bannerUrl: bannerUrl,
-                ),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    return Semantics(
+      label: '$name, $type, prep time $prepTime',
+      hint: 'Double tap to view menu',
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (_) => StorePage(
+                    storeId: storeId,
+                    name: name,
+                    type: type,
+                    prepTime: prepTime,
+                    logoUrl: logoUrl,
+                    bannerUrl: bannerUrl,
+                  ),
             ),
-          ],
-        ),
+          );
+        },
+        child: Container(
+          margin: isGridItem ? EdgeInsets.zero : const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
         child: Row(
           children: [
             Container(

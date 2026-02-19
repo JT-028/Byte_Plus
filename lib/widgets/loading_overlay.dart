@@ -233,6 +233,7 @@ class HeartPulse extends StatefulWidget {
   final Color activeColor;
   final Color inactiveColor;
   final VoidCallback? onTap;
+  final String? semanticLabel;
 
   const HeartPulse({
     super.key,
@@ -241,6 +242,7 @@ class HeartPulse extends StatefulWidget {
     this.activeColor = Colors.red,
     this.inactiveColor = Colors.grey,
     this.onTap,
+    this.semanticLabel,
   });
 
   @override
@@ -282,26 +284,43 @@ class _HeartPulseState extends State<HeartPulse>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        widget.onTap?.call();
-        if (!widget.isActive) {
-          _controller.forward(from: 0);
-        }
-      },
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Icon(
-              widget.isActive ? Icons.favorite : Icons.favorite_border,
-              size: widget.size,
-              color:
-                  widget.isActive ? widget.activeColor : widget.inactiveColor,
-            ),
-          );
+    final label =
+        widget.semanticLabel ??
+        (widget.isActive ? 'Remove from favorites' : 'Add to favorites');
+
+    return Semantics(
+      label: label,
+      button: true,
+      child: GestureDetector(
+        onTap: () {
+          widget.onTap?.call();
+          if (!widget.isActive) {
+            _controller.forward(from: 0);
+          }
         },
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
+                  child: Icon(
+                    widget.isActive ? Icons.favorite : Icons.favorite_border,
+                    size: widget.size,
+                    color:
+                        widget.isActive
+                            ? widget.activeColor
+                            : widget.inactiveColor,
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

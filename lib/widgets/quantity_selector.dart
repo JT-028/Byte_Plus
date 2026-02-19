@@ -245,19 +245,26 @@ class ProductQuantitySelector extends StatelessWidget {
     required Color backgroundColor,
     required Color iconColor,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: onTap != null ? iconColor : iconColor.withValues(alpha: 0.3),
+    final isDecrease = icon == Icons.remove;
+    return Semantics(
+      label: isDecrease ? 'Decrease quantity' : 'Increase quantity',
+      hint: isDecrease ? 'Double tap to decrease' : 'Double tap to increase',
+      button: true,
+      enabled: onTap != null,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            size: 22,
+            color: onTap != null ? iconColor : iconColor.withValues(alpha: 0.3),
+          ),
         ),
       ),
     );
@@ -269,12 +276,14 @@ class AddButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showQuantity;
   final int quantity;
+  final String? semanticLabel;
 
   const AddButton({
     super.key,
     this.onTap,
     this.showQuantity = false,
     this.quantity = 0,
+    this.semanticLabel,
   });
 
   @override
@@ -283,32 +292,51 @@ class AddButton extends StatelessWidget {
     final primaryColor = isDark ? AppColors.primaryLight : AppColors.primary;
 
     if (showQuantity && quantity > 0) {
-      return Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
-        child: Center(
-          child: Text(
-            quantity.toString(),
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textOnPrimary,
-              fontWeight: FontWeight.w700,
+      return Semantics(
+        label: '${quantity} in cart',
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: primaryColor,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              quantity.toString(),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.textOnPrimary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
       );
     }
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: primaryColor.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
+    // Use a larger hit target while keeping visual size smaller
+    return Semantics(
+      label: semanticLabel ?? 'Add to cart',
+      hint: 'Double tap to add item to cart',
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.add, size: 18, color: primaryColor),
+            ),
+          ),
         ),
-        child: Icon(Icons.add, size: 18, color: primaryColor),
       ),
     );
   }

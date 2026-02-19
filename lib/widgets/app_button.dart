@@ -256,6 +256,7 @@ class AppIconButton extends StatefulWidget {
   final Color? iconColor;
   final double size;
   final double iconSize;
+  final String? semanticLabel;
 
   const AppIconButton({
     super.key,
@@ -263,8 +264,9 @@ class AppIconButton extends StatefulWidget {
     this.onPressed,
     this.backgroundColor,
     this.iconColor,
-    this.size = 44,
+    this.size = 48,
     this.iconSize = 22,
+    this.semanticLabel,
   });
 
   @override
@@ -299,32 +301,37 @@ class _AppIconButtonState extends State<AppIconButton>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
-      onTap: widget.onPressed,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(scale: _scaleAnimation.value, child: child);
-        },
-        child: Container(
-          width: widget.size,
-          height: widget.size,
-          decoration: BoxDecoration(
-            color:
-                widget.backgroundColor ??
-                (isDark ? AppColors.surfaceVariantDark : AppColors.surface),
-            shape: BoxShape.circle,
-            boxShadow: AppShadows.small,
-          ),
-          child: Icon(
-            widget.icon,
-            size: widget.iconSize,
-            color:
-                widget.iconColor ??
-                (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+    return Semantics(
+      label: widget.semanticLabel,
+      button: true,
+      enabled: widget.onPressed != null,
+      child: GestureDetector(
+        onTapDown: (_) => _controller.forward(),
+        onTapUp: (_) => _controller.reverse(),
+        onTapCancel: () => _controller.reverse(),
+        onTap: widget.onPressed,
+        child: AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) {
+            return Transform.scale(scale: _scaleAnimation.value, child: child);
+          },
+          child: Container(
+            width: widget.size,
+            height: widget.size,
+            decoration: BoxDecoration(
+              color:
+                  widget.backgroundColor ??
+                  (isDark ? AppColors.surfaceVariantDark : AppColors.surface),
+              shape: BoxShape.circle,
+              boxShadow: AppShadows.small,
+            ),
+            child: Icon(
+              widget.icon,
+              size: widget.iconSize,
+              color:
+                  widget.iconColor ??
+                  (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+            ),
           ),
         ),
       ),
