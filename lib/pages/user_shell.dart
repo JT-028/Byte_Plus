@@ -24,9 +24,6 @@ class _UserShellState extends State<UserShell> {
 
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
-  static const Color kBrandBlue = Color(0xFF1F41BB);
-  static const Color kPageBg = Color(0xFFF7F3FF);
-
   final List<String> categories = const [
     "All",
     "Drinks",

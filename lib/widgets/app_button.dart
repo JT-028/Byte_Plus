@@ -248,8 +248,8 @@ class AppButton extends StatelessWidget {
   }
 }
 
-/// Circular Icon Button
-class AppIconButton extends StatelessWidget {
+/// Circular Icon Button with tap scale animation
+class AppIconButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback? onPressed;
   final Color? backgroundColor;
@@ -268,27 +268,64 @@ class AppIconButton extends StatelessWidget {
   });
 
   @override
+  State<AppIconButton> createState() => _AppIconButtonState();
+}
+
+class _AppIconButtonState extends State<AppIconButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.92,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color:
-              backgroundColor ??
-              (isDark ? AppColors.surfaceVariantDark : AppColors.surface),
-          shape: BoxShape.circle,
-          boxShadow: AppShadows.small,
-        ),
-        child: Icon(
-          icon,
-          size: iconSize,
-          color:
-              iconColor ??
-              (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      onTap: widget.onPressed,
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(scale: _scaleAnimation.value, child: child);
+        },
+        child: Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color:
+                widget.backgroundColor ??
+                (isDark ? AppColors.surfaceVariantDark : AppColors.surface),
+            shape: BoxShape.circle,
+            boxShadow: AppShadows.small,
+          ),
+          child: Icon(
+            widget.icon,
+            size: widget.iconSize,
+            color:
+                widget.iconColor ??
+                (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+          ),
         ),
       ),
     );

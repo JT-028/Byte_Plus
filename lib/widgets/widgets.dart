@@ -13,3 +13,9 @@ export 'app_text_field.dart';
 export 'category_chip.dart';
 export 'quantity_selector.dart';
 export 'status_badge.dart';
+
+// Micro-interaction & Animation widgets
+export 'tap_scale_wrapper.dart';
+export 'shimmer_loading.dart';
+export 'animated_list_item.dart';
+export 'loading_overlay.dart';

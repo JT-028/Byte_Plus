@@ -1,32 +1,45 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../theme/app_theme.dart';
+import '../services/theme_service.dart';
 
 class MerchantProfilePage extends StatelessWidget {
   const MerchantProfilePage({super.key});
 
-  static const Color kBrandBlue = Color(0xFF1F41BB);
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Profile",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
               ),
               const SizedBox(height: 16),
 
+              // Profile card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0F2FF),
+                  color:
+                      isDark ? AppColors.surfaceDark : const Color(0xFFF0F2FF),
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
@@ -35,7 +48,7 @@ class MerchantProfilePage extends StatelessWidget {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: kBrandBlue,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(Icons.store, color: Colors.white),
@@ -44,9 +57,13 @@ class MerchantProfilePage extends StatelessWidget {
                     Expanded(
                       child: Text(
                         FirebaseAuth.instance.currentUser?.email ?? "",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -54,46 +71,127 @@ class MerchantProfilePage extends StatelessWidget {
                 ),
               ),
 
+              const SizedBox(height: 20),
+
+              // Dark Mode Toggle
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      isDark ? AppColors.surfaceDark : AppColors.surfaceVariant,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      isDark ? Icons.dark_mode : Icons.light_mode,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        "Dark Mode",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Consumer<ThemeService>(
+                      builder: (context, themeService, _) {
+                        return Switch(
+                          value: themeService.isDarkMode,
+                          onChanged: (_) => themeService.toggleTheme(),
+                          activeColor: AppColors.primary,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
               const Spacer(),
 
+              // Logout button
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor:
+                        isDark ? AppColors.surfaceDark : Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(color: Colors.grey.shade300),
+                      side: BorderSide(
+                        color:
+                            isDark
+                                ? AppColors.borderDark
+                                : Colors.grey.shade300,
+                      ),
                     ),
                   ),
                   onPressed: () async {
                     final ok = await showDialog<bool>(
                       context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text(
-                          "Log out?",
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        content: const Text("Are you sure you want to log out?"),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text("No"),
-                          ),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kBrandBlue,
+                      builder:
+                          (_) => AlertDialog(
+                            backgroundColor:
+                                isDark ? AppColors.surfaceDark : Colors.white,
+                            title: Text(
+                              "Log out?",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color:
+                                    isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
                             ),
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text(
-                              "Yes",
-                              style: TextStyle(color: Colors.white),
+                            content: Text(
+                              "Are you sure you want to log out?",
+                              style: TextStyle(
+                                color:
+                                    isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
+                              ),
                             ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: Text(
+                                  "No",
+                                  style: TextStyle(
+                                    color:
+                                        isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                ),
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  "Yes",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     );
 
                     if (ok == true) {
@@ -101,10 +199,10 @@ class MerchantProfilePage extends StatelessWidget {
                       // main.dart StreamBuilder will automatically route to LoginPage
                     }
                   },
-                  child: const Text(
+                  child: Text(
                     "Log Out",
                     style: TextStyle(
-                      color: kBrandBlue,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

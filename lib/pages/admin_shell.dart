@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../theme/app_theme.dart';
 import '../pages/login_page.dart';
 import '../pages/manage_menu_page.dart';
 
@@ -19,69 +21,120 @@ class _AdminShellState extends State<AdminShell> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.orange.shade50,
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
-        title: const Text('Byte Plus Admin',
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.orange,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+        title: Text(
+          'Byte Plus Admin',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.textPrimaryDark : Colors.white,
           ),
         ),
+        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.primary,
+        leading: Builder(
+          builder:
+              (context) => IconButton(
+                icon: Icon(
+                  Icons.menu,
+                  color: isDark ? AppColors.textPrimaryDark : Colors.white,
+                ),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+        ),
       ),
-      drawer: _buildDrawer(context),
-      body: _selected == 0 ? _buildOrdersDashboard() : const ManageMenuPage(),
+      drawer: _buildDrawer(context, isDark),
+      body:
+          _selected == 0
+              ? _buildOrdersDashboard(isDark)
+              : const ManageMenuPage(),
     );
   }
 
-  Drawer _buildDrawer(BuildContext context) {
+  Drawer _buildDrawer(BuildContext context, bool isDark) {
     return Drawer(
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       child: SafeArea(
         child: Column(
           children: [
             FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(_user.uid)
-                  .get(),
+              future:
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(_user.uid)
+                      .get(),
               builder: (context, snap) {
                 final data = snap.data?.data() as Map<String, dynamic>? ?? {};
                 return UserAccountsDrawerHeader(
-                  decoration: const BoxDecoration(color: Colors.orange),
-                  accountName: Text(data['name'] ?? 'Admin'),
-                  accountEmail: Text(data['email'] ?? _user.email ?? ''),
-                  currentAccountPicture: const CircleAvatar(
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.primaryDark : AppColors.primary,
+                  ),
+                  accountName: Text(
+                    data['name'] ?? 'Admin',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  accountEmail: Text(
+                    data['email'] ?? _user.email ?? '',
+                    style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                  ),
+                  currentAccountPicture: CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.admin_panel_settings,
-                        color: Colors.orange, size: 36),
+                    child: Icon(
+                      Icons.admin_panel_settings,
+                      color: AppColors.primary,
+                      size: 36,
+                    ),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.receipt_long),
-              title: const Text('Orders'),
+              leading: Icon(
+                Icons.receipt_long,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+              title: Text(
+                'Orders',
+                style: TextStyle(
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
               onTap: () {
                 setState(() => _selected = 0);
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.fastfood),
-              title: const Text('Manage Menu'),
+              leading: Icon(
+                Icons.fastfood,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+              title: Text(
+                'Manage Menu',
+                style: TextStyle(
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
               onTap: () {
                 setState(() => _selected = 1);
                 Navigator.pop(context);
               },
             ),
             const Spacer(),
-            const Divider(),
+            Divider(color: isDark ? AppColors.borderDark : AppColors.border),
             ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
+              leading: Icon(Icons.logout, color: AppColors.error),
+              title: Text('Logout', style: TextStyle(color: AppColors.error)),
               onTap: () async {
                 await _auth.signOut();
                 if (!mounted) return;
@@ -97,16 +150,17 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 
-  Widget _buildOrdersDashboard() {
+  Widget _buildOrdersDashboard(bool isDark) {
     return DefaultTabController(
       length: 4,
       child: Column(
         children: [
-          const TabBar(
-            indicatorColor: Colors.orange,
-            labelColor: Colors.orange,
-            unselectedLabelColor: Colors.black54,
-            tabs: [
+          TabBar(
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor:
+                isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+            tabs: const [
               Tab(text: 'To-Do'),
               Tab(text: 'In Progress'),
               Tab(text: 'Done'),
@@ -116,10 +170,10 @@ class _AdminShellState extends State<AdminShell> {
           Expanded(
             child: TabBarView(
               children: [
-                _buildOrdersList('to-do'),
-                _buildOrdersList('in-progress'),
-                _buildOrdersList('done'),
-                _buildOrdersList('cancelled'),
+                _buildOrdersList('to-do', isDark),
+                _buildOrdersList('in-progress', isDark),
+                _buildOrdersList('done', isDark),
+                _buildOrdersList('cancelled', isDark),
               ],
             ),
           ),
@@ -128,20 +182,33 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 
-  Widget _buildOrdersList(String status) {
+  Widget _buildOrdersList(String status, bool isDark) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('orders')
-          .where('status', isEqualTo: status)
-          .orderBy('timestamp', descending: true)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection('orders')
+              .where('status', isEqualTo: status)
+              .orderBy('timestamp', descending: true)
+              .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          );
         }
         final docs = snap.data!.docs;
         if (docs.isEmpty) {
-          return Center(child: Text('No $status orders.'));
+          return Center(
+            child: Text(
+              'No $status orders.',
+              style: TextStyle(
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+            ),
+          );
         }
 
         return ListView.builder(
@@ -155,28 +222,72 @@ class _AdminShellState extends State<AdminShell> {
             final total = (data['total'] as num?)?.toDouble() ?? 0;
 
             return Card(
-              shape:
-                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Order #${docs[i].id.substring(0, 6)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      'Order #${docs[i].id.substring(0, 6)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text('Customer: $userName'),
-                    Text('Email: $userEmail',
-                        style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                    const Divider(),
-                    ...items.map((e) => Text(
-                        '${e['name']} (₱${e['price']} × ${e['qty']})')),
+                    Text(
+                      'Customer: $userName',
+                      style: TextStyle(
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Email: $userEmail',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    Divider(
+                      color: isDark ? AppColors.borderDark : AppColors.border,
+                    ),
+                    ...items.map(
+                      (e) => Text(
+                        '${e['name']} (₱${e['price']} × ${e['qty']})',
+                        style: TextStyle(
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 6),
-                    Text('Total: ₱${total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold, color: Colors.black87)),
+                    Text(
+                      'Total: ₱${total.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Align(
                       alignment: Alignment.centerRight,
@@ -194,21 +305,30 @@ class _AdminShellState extends State<AdminShell> {
                             const SizedBox(width: 8),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
+                                backgroundColor: AppColors.info,
                               ),
-                              onPressed: () =>
-                                  _updateOrderStatus(docs[i].id, 'in-progress'),
-                              child: const Text('Start'),
+                              onPressed:
+                                  () => _updateOrderStatus(
+                                    docs[i].id,
+                                    'in-progress',
+                                  ),
+                              child: const Text(
+                                'Start',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ] else if (status == 'in-progress') ...[
                             const SizedBox(width: 8),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: AppColors.success,
                               ),
-                              onPressed: () =>
-                                  _updateOrderStatus(docs[i].id, 'done'),
-                              child: const Text('Done'),
+                              onPressed:
+                                  () => _updateOrderStatus(docs[i].id, 'done'),
+                              child: const Text(
+                                'Done',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ],
                         ],
@@ -225,24 +345,23 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Future<void> _updateOrderStatus(String id, String newStatus) async {
-    await FirebaseFirestore.instance
-        .collection('orders')
-        .doc(id)
-        .update({'status': newStatus});
+    await FirebaseFirestore.instance.collection('orders').doc(id).update({
+      'status': newStatus,
+    });
   }
 
   Color _statusColor(String s) {
     switch (s) {
       case 'to-do':
-        return Colors.grey;
+        return AppColors.statusTodo;
       case 'in-progress':
-        return Colors.blue;
+        return AppColors.statusPreparing;
       case 'done':
-        return Colors.green;
+        return AppColors.statusDone;
       case 'cancelled':
-        return Colors.red;
+        return AppColors.statusCancelled;
       default:
-        return Colors.grey;
+        return AppColors.textTertiary;
     }
   }
 }

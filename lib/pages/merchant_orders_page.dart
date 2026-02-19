@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
 
@@ -11,9 +13,6 @@ class MerchantOrdersPage extends StatefulWidget {
 }
 
 class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
-  static const Color kBrandBlue = Color(0xFF1F41BB);
-  static const Color kPageBg = Color(0xFFF7F3FF);
-
   int tabIndex = 0;
 
   String get merchantUid => FirebaseAuth.instance.currentUser!.uid;
@@ -28,11 +27,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: kPageBg,
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child: FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance.collection("users").doc(merchantUid).get(),
+          future:
+              FirebaseFirestore.instance
+                  .collection("users")
+                  .doc(merchantUid)
+                  .get(),
           builder: (context, userSnap) {
             if (userSnap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -51,34 +56,34 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               );
             }
 
-            return _page(storeId);
+            return _page(storeId, isDark);
           },
         ),
       ),
     );
   }
 
-  Widget _page(String storeId) {
+  Widget _page(String storeId, bool isDark) {
     return Column(
       children: [
-        _topHeader(),
+        _topHeader(isDark),
         const SizedBox(height: 10),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: _tabsRow(), // like UI
+          child: _tabsRow(isDark),
         ),
         const SizedBox(height: 14),
-        Expanded(child: _ordersList(storeId)),
+        Expanded(child: _ordersList(storeId, isDark)),
       ],
     );
   }
 
-  Widget _topHeader() {
+  Widget _topHeader(bool isDark) {
     return Container(
       height: 120,
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: kBrandBlue,
+        color: AppColors.primary,
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(28),
           bottomRight: Radius.circular(28),
@@ -105,17 +110,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               width: 38,
               height: 38,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  const Icon(Icons.school, color: Colors.white),
+              errorBuilder:
+                  (_, __, ___) => const Icon(Icons.school, color: Colors.white),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
   // UI-like text tabs row (New Preparing Ready Completed Canceled)
-  Widget _tabsRow() {
+  Widget _tabsRow(bool isDark) {
     return Row(
       children: List.generate(tabs.length, (i) {
         final active = tabIndex == i;
@@ -132,7 +137,12 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                      color: active ? kBrandBlue : Colors.black45,
+                      color:
+                          active
+                              ? AppColors.primary
+                              : (isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -140,10 +150,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                     height: 2.2,
                     width: 34,
                     decoration: BoxDecoration(
-                      color: active ? kBrandBlue : Colors.transparent,
+                      color: active ? AppColors.primary : Colors.transparent,
                       borderRadius: BorderRadius.circular(999),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -153,16 +163,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     );
   }
 
-  Widget _ordersList(String storeId) {
+  Widget _ordersList(String storeId, bool isDark) {
     final selectedStatus = tabs[tabIndex].status;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("stores")
-          .doc(storeId)
-          .collection("orders")
-          .orderBy("timestamp", descending: true)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection("stores")
+              .doc(storeId)
+              .collection("orders")
+              .orderBy("timestamp", descending: true)
+              .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -171,17 +182,18 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         final allDocs = snap.data!.docs;
 
         // filter by status
-        final filtered = allDocs.where((d) {
-          final data = d.data() as Map<String, dynamic>;
-          return (data["status"] ?? "").toString() == selectedStatus;
-        }).toList();
+        final filtered =
+            allDocs.where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              return (data["status"] ?? "").toString() == selectedStatus;
+            }).toList();
 
         if (allDocs.isEmpty) {
-          return _emptyState("No Orders Yet");
+          return _emptyState("No Orders Yet", isDark);
         }
 
         if (filtered.isEmpty) {
-          return _emptyState("No ${tabs[tabIndex].label} Orders");
+          return _emptyState("No ${tabs[tabIndex].label} Orders", isDark);
         }
 
         return ListView.builder(
@@ -195,6 +207,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               orderId: (data["orderId"] ?? doc.id).toString(),
               userId: (data["userId"] ?? "").toString(),
               data: data,
+              isDark: isDark,
             );
           },
         );
@@ -202,23 +215,38 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     );
   }
 
-  Widget _emptyState(String title) {
+  Widget _emptyState(String title, bool isDark) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long, size: 78, color: Colors.grey.shade400),
+            Icon(
+              Icons.receipt_long,
+              size: 78,
+              color: isDark ? AppColors.textTertiaryDark : Colors.grey.shade400,
+            ),
             const SizedBox(height: 18),
             Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               "Orders will appear here once customers place them.",
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: 13,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -232,12 +260,14 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     required String orderId,
     required String userId,
     required Map<String, dynamic> data,
+    required bool isDark,
   }) {
     final status = (data["status"] ?? "").toString();
     final storeName = (data["storeName"] ?? storeId).toString();
     final total = (data["total"] as num? ?? 0).toDouble();
 
-    final items = (data["items"] is List) ? (data["items"] as List) : <dynamic>[];
+    final items =
+        (data["items"] is List) ? (data["items"] as List) : <dynamic>[];
     final firstItemName =
         items.isNotEmpty ? (items.first["productName"] ?? "").toString() : "";
 
@@ -252,9 +282,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE6E6E6)),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : const Color(0xFFE6E6E6),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,21 +300,37 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   children: [
                     Text(
                       storeName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w800,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       firstItemName.isEmpty ? "Order" : firstItemName,
-                      style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     if (queueNo.isNotEmpty)
                       Text(
                         "#$queueNo",
-                        style: const TextStyle(fontSize: 12, color: Colors.black45),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
                       ),
                   ],
                 ),
@@ -298,7 +346,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: const Color(0xFFF2F4FA),
+              color:
+                  isDark
+                      ? AppColors.surfaceVariantDark
+                      : const Color(0xFFF2F4FA),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -307,22 +358,43 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: kBrandBlue,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(Icons.access_time, color: Colors.white, size: 18),
+                  child: const Icon(
+                    Icons.access_time,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Pickup time",
-                          style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      Text(
+                        "Pickup time",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
                       Text(
-                        pickupNow ? "Pick up now" : (_formatPickupTime(pickupTime) ?? "Scheduled"),
-                        style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
+                        pickupNow
+                            ? "Pick up now"
+                            : (_formatPickupTime(pickupTime) ?? "Scheduled"),
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -336,11 +408,27 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           // Total row
           Row(
             children: [
-              const Text("Total", style: TextStyle(fontSize: 13, color: Colors.black54)),
+              Text(
+                "Total",
+                style: TextStyle(
+                  fontSize: 13,
+                  color:
+                      isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
               const Spacer(),
               Text(
                 "₱ ${total.toStringAsFixed(0)}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -350,53 +438,55 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           // Actions
           _actionsRow(
             status: status,
-            onAccept: () => _confirmAction(
-              title: "Accept this order?",
-              message: "This will move the order to Preparing.",
-              confirmText: "Accept",
-              confirmColor: kBrandBlue,
-              onConfirm: () async {
-                await _updateOrderStatusEverywhere(
-                  storeId: storeId,
-                  orderId: orderId,
-                  userId: userId,
-                  newStatus: "in-progress",
-                  extra: {
-                    "acceptedAt": FieldValue.serverTimestamp(),
-                    "acceptedBy": merchantUid,
-                  },
-                );
+            onAccept:
+                () => _confirmAction(
+                  title: "Accept this order?",
+                  message: "This will move the order to Preparing.",
+                  confirmText: "Accept",
+                  confirmColor: AppColors.primary,
+                  onConfirm: () async {
+                    await _updateOrderStatusEverywhere(
+                      storeId: storeId,
+                      orderId: orderId,
+                      userId: userId,
+                      newStatus: "in-progress",
+                      extra: {
+                        "acceptedAt": FieldValue.serverTimestamp(),
+                        "acceptedBy": merchantUid,
+                      },
+                    );
 
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Order accepted.")),
-                );
-              },
-            ),
-            onReject: () => _confirmAction(
-              title: "Reject / Cancel this order?",
-              message: "This will move the order to Canceled.",
-              confirmText: "Reject",
-              confirmColor: Colors.red,
-              onConfirm: () async {
-                await _updateOrderStatusEverywhere(
-                  storeId: storeId,
-                  orderId: orderId,
-                  userId: userId,
-                  newStatus: "cancelled",
-                  extra: {
-                    "cancelledAt": FieldValue.serverTimestamp(),
-                    "cancelledBy": merchantUid,
-                    "cancelledByRole": "staff",
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Order accepted.")),
+                    );
                   },
-                );
+                ),
+            onReject:
+                () => _confirmAction(
+                  title: "Reject / Cancel this order?",
+                  message: "This will move the order to Canceled.",
+                  confirmText: "Reject",
+                  confirmColor: Colors.red,
+                  onConfirm: () async {
+                    await _updateOrderStatusEverywhere(
+                      storeId: storeId,
+                      orderId: orderId,
+                      userId: userId,
+                      newStatus: "cancelled",
+                      extra: {
+                        "cancelledAt": FieldValue.serverTimestamp(),
+                        "cancelledBy": merchantUid,
+                        "cancelledByRole": "staff",
+                      },
+                    );
 
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Order cancelled.")),
-                );
-              },
-            ),
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Order cancelled.")),
+                    );
+                  },
+                ),
             onMarkReady: () async {
               await _updateOrderStatusEverywhere(
                 storeId: storeId,
@@ -409,9 +499,9 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 },
               );
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Marked as ready.")),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Marked as ready.")));
             },
             onPickedUp: () async {
               await _updateOrderStatusEverywhere(
@@ -450,11 +540,16 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               onPressed: onReject,
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Colors.grey.shade300),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: const Text(
                 "Reject",
-                style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -463,12 +558,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
             child: ElevatedButton(
               onPressed: onAccept,
               style: ElevatedButton.styleFrom(
-                backgroundColor: kBrandBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               child: const Text(
                 "Accept",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -483,8 +583,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         child: ElevatedButton(
           onPressed: onMarkReady,
           style: ElevatedButton.styleFrom(
-            backgroundColor: kBrandBlue,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
           child: const Text(
             "Mark as Ready",
@@ -501,8 +603,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         child: ElevatedButton(
           onPressed: onPickedUp,
           style: ElevatedButton.styleFrom(
-            backgroundColor: kBrandBlue,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            backgroundColor: AppColors.primary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
           child: const Text(
             "Picked Up",
@@ -522,39 +626,46 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
     switch (status) {
       case "to-do":
-        bg = const Color(0xFFFFF1D6);
-        fg = const Color(0xFFB56A00);
+        bg = AppColors.warningLight;
+        fg = AppColors.warning;
         label = "New";
         break;
       case "in-progress":
         bg = const Color(0xFFE9EDFF);
-        fg = kBrandBlue;
+        fg = AppColors.primary;
         label = "Preparing";
         break;
       case "ready":
-        bg = kBrandBlue;
+        bg = AppColors.primary;
         fg = Colors.white;
         label = "Ready";
         break;
       case "done":
-        bg = const Color(0xFFE6F7EA);
-        fg = const Color(0xFF1E7A34);
+        bg = AppColors.successLight;
+        fg = AppColors.success;
         label = "Completed";
         break;
       case "cancelled":
       default:
-        bg = const Color(0xFFF3F3F3);
-        fg = Colors.black54;
+        bg = AppColors.errorLight;
+        fg = AppColors.error;
         label = "Canceled";
         break;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: fg),
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w800,
+          color: fg,
+        ),
       ),
     );
   }
@@ -588,7 +699,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       context: context,
       builder: (_) {
         return AlertDialog(
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
           content: Text(message),
           actions: [
             TextButton(
@@ -598,7 +712,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: confirmColor),
               onPressed: () => Navigator.pop(context, true),
-              child: Text(confirmText, style: const TextStyle(color: Colors.white)),
+              child: Text(
+                confirmText,
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -632,10 +749,16 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       ...?extra,
     };
 
-    final storeRef =
-        db.collection("stores").doc(storeId).collection("orders").doc(orderId);
-    final userRef =
-        db.collection("users").doc(userId).collection("orders").doc(orderId);
+    final storeRef = db
+        .collection("stores")
+        .doc(storeId)
+        .collection("orders")
+        .doc(orderId);
+    final userRef = db
+        .collection("users")
+        .doc(userId)
+        .collection("orders")
+        .doc(orderId);
     final globalRef = db.collection("orders").doc(orderId);
 
     // 1) Update store + user (required)
@@ -649,7 +772,9 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       await globalRef.update(payload);
     } catch (e) {
       // ignore: avoid_print
-      print("⚠️ Global /orders/$orderId missing or blocked. Skipping. Error: $e");
+      print(
+        "⚠️ Global /orders/$orderId missing or blocked. Skipping. Error: $e",
+      );
     }
   }
 }

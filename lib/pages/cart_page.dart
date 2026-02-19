@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import '../services/order_service.dart';
 
 class CartPage extends StatefulWidget {
@@ -13,8 +14,6 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  static const kBrandBlue = Color(0xFF1F41BB);
-
   bool _placing = false;
 
   // temporary defaults (keep compatible with your future pickup UI)
@@ -24,9 +23,20 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser!.uid;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Your Cart"), centerTitle: true),
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
+      appBar: AppBar(
+        title: Text(
+          "Your Cart",
+          style: TextStyle(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        centerTitle: true,
+        backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream:
             FirebaseFirestore.instance
@@ -68,11 +78,13 @@ class _CartPageState extends State<CartPage> {
                       ),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? AppColors.surfaceDark : Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withOpacity(
+                              isDark ? 0.2 : 0.06,
+                            ),
                             blurRadius: 6,
                           ),
                         ],
@@ -95,24 +107,54 @@ class _CartPageState extends State<CartPage> {
                               children: [
                                 Text(
                                   (data['productName'] ?? '').toString(),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w600,
+                                    color:
+                                        isDark
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.textPrimary,
                                   ),
                                 ),
                                 Text(
                                   "₱ ${(data['sizePrice'] ?? 0).toString()}",
+                                  style: TextStyle(
+                                    color:
+                                        isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                  ),
                                 ),
                                 if (((data['sizeName'] ?? "").toString())
                                     .isNotEmpty)
-                                  Text("Size: ${data['sizeName']}"),
+                                  Text(
+                                    "Size: ${data['sizeName']}",
+                                    style: TextStyle(
+                                      color:
+                                          isDark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondary,
+                                    ),
+                                  ),
                                 Text(
                                   "Qty: ${(data['quantity'] ?? 1).toString()}",
+                                  style: TextStyle(
+                                    color:
+                                        isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete),
+                            icon: Icon(
+                              Icons.delete,
+                              color:
+                                  isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondary,
+                            ),
                             onPressed: () async {
                               await FirebaseFirestore.instance
                                   .collection("users")
@@ -135,27 +177,37 @@ class _CartPageState extends State<CartPage> {
                   horizontal: 20,
                   vertical: 16,
                 ),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
                 ),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           "Total",
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
                           ),
                         ),
                         Text(
                           "₱ ${total.toStringAsFixed(0)}",
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -173,7 +225,7 @@ class _CartPageState extends State<CartPage> {
                                 );
                               },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: kBrandBlue,
+                        backgroundColor: AppColors.primary,
                         minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),

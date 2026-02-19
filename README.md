@@ -1,4 +1,4 @@
-# flutter_fixed
+# Byte Plus - Smart Canteen System
 
 A new Flutter project.
 

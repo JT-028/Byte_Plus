@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 class CartStoreSheet extends StatefulWidget {
   final String storeId;
 
@@ -14,21 +16,21 @@ class CartStoreSheet extends StatefulWidget {
 }
 
 class _CartStoreSheetState extends State<CartStoreSheet> {
-  static const Color kBrandBlue = Color(0xFF1F41BB);
-
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.75,
       maxChildSize: 0.95,
       minChildSize: 0.40,
       builder: (_, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
           ),
           child: Column(
             children: [
@@ -39,16 +41,23 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
                 width: 55,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: kBrandBlue,
+                  color: AppColors.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
               const SizedBox(height: 12),
 
               // ------------ TITLE ---------------
-              const Text(
+              Text(
                 "Your Items",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
               ),
               const SizedBox(height: 6),
 
@@ -63,16 +72,25 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
                           .snapshots(),
                   builder: (_, snap) {
                     if (!snap.hasData) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      );
                     }
 
                     final docs = snap.data!.docs;
 
                     if (docs.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           "No items in your cart.",
-                          style: TextStyle(color: Colors.black54),
+                          style: TextStyle(
+                            color:
+                                isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
                         ),
                       );
                     }
@@ -82,7 +100,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
                       padding: const EdgeInsets.only(bottom: 20),
                       itemCount: docs.length,
                       itemBuilder: (_, i) {
-                        return _cartRow(docs[i]);
+                        return _cartRow(docs[i], isDark);
                       },
                     );
                   },
@@ -90,7 +108,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
               ),
 
               // ----------- CHECKOUT BAR -----------
-              _checkoutBar(),
+              _checkoutBar(isDark),
             ],
           ),
         );
@@ -101,7 +119,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
   // ============================================================
   // CART ROW WIDGET
   // ============================================================
-  Widget _cartRow(QueryDocumentSnapshot cartDoc) {
+  Widget _cartRow(QueryDocumentSnapshot cartDoc, bool isDark) {
     final data = cartDoc.data() as Map<String, dynamic>;
 
     final name = data["productName"] ?? "";
@@ -121,7 +139,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F8F8),
+        color: isDark ? AppColors.surfaceVariantDark : const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -134,7 +152,15 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
               width: 56,
               height: 56,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 48),
+              errorBuilder:
+                  (_, __, ___) => Icon(
+                    Icons.image,
+                    size: 48,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
             ),
           ),
 
@@ -147,9 +173,13 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
                 if (subtitle.isNotEmpty)
@@ -157,8 +187,11 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.black54,
+                      style: TextStyle(
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -168,13 +201,17 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
           ),
 
           // QTY CONTROLS
-          _qtyController(cartDoc),
+          _qtyController(cartDoc, isDark),
 
           const SizedBox(width: 12),
 
           Text(
             "₱ ${price.toStringAsFixed(0)}",
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -184,7 +221,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
   // ============================================================
   // QUANTITY CONTROLLER
   // ============================================================
-  Widget _qtyController(QueryDocumentSnapshot cartDoc) {
+  Widget _qtyController(QueryDocumentSnapshot cartDoc, bool isDark) {
     final data = cartDoc.data() as Map<String, dynamic>;
     final qty = (data["quantity"] ?? 1).toInt();
     final lineTotal = (data["lineTotal"] ?? 0).toDouble();
@@ -203,18 +240,34 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+        ),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.remove, size: 18),
+            icon: Icon(
+              Icons.remove,
+              size: 18,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
             onPressed: () => changeQty(qty - 1),
           ),
-          Text(qty.toString(), style: const TextStyle(fontSize: 14)),
+          Text(
+            qty.toString(),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
+          ),
           IconButton(
-            icon: const Icon(Icons.add, size: 18),
+            icon: Icon(
+              Icons.add,
+              size: 18,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
             onPressed: () => changeQty(qty + 1),
           ),
         ],
@@ -225,17 +278,17 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
   // ============================================================
   // CHECKOUT BAR → jumps to real cart page (UserShell index 1)
   // ============================================================
-  Widget _checkoutBar() {
+  Widget _checkoutBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: isDark ? Colors.black26 : Colors.black12,
             blurRadius: 6,
-            offset: Offset(0, -2),
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -249,7 +302,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
         child: Container(
           height: 48,
           decoration: BoxDecoration(
-            color: kBrandBlue,
+            color: AppColors.primary,
             borderRadius: BorderRadius.circular(14),
           ),
           alignment: Alignment.center,

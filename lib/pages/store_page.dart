@@ -32,8 +32,6 @@ class StorePage extends StatefulWidget {
 }
 
 class _StorePageState extends State<StorePage> {
-  static const Color kBrandBlue = Color(0xFF1F41BB);
-
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
   List<String> categories = ["Popular"];

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "flutter_fixed" "\0"
+            VALUE "CompanyName", "BytePlus" "\0"
+            VALUE "FileDescription", "Byte Plus - Smart Canteen System" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "flutter_fixed" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "flutter_fixed.exe" "\0"
-            VALUE "ProductName", "flutter_fixed" "\0"
+            VALUE "InternalName", "byte_plus_main" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 BytePlus. All rights reserved." "\0"
+            VALUE "OriginalFilename", "byte_plus_main.exe" "\0"
+            VALUE "ProductName", "Byte Plus" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
