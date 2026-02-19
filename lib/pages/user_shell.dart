@@ -320,7 +320,11 @@ class _UserShellState extends State<UserShell> {
               vertical: 12,
             ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: responsive.value(mobile: 1, tablet: 2, desktop: 3),
+              crossAxisCount: responsive.value(
+                mobile: 1,
+                tablet: 2,
+                desktop: 3,
+              ),
               crossAxisSpacing: 16,
               mainAxisSpacing: 14,
               childAspectRatio: 2.8,
@@ -399,7 +403,8 @@ class _UserShellState extends State<UserShell> {
           );
         },
         child: Container(
-          margin: isGridItem ? EdgeInsets.zero : const EdgeInsets.only(bottom: 14),
+          margin:
+              isGridItem ? EdgeInsets.zero : const EdgeInsets.only(bottom: 14),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -412,147 +417,148 @@ class _UserShellState extends State<UserShell> {
               ),
             ],
           ),
-        child: Row(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.network(
-                  logoUrl,
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                  errorBuilder:
-                      (_, __, ___) => Container(
-                        width: 64,
-                        height: 64,
-                        color:
-                            isDark
-                                ? AppColors.surfaceVariantDark
-                                : Colors.grey.shade200,
-                        child: Icon(
-                          Iconsax.shop,
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    logoUrl,
+                    width: 64,
+                    height: 64,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 64,
+                          height: 64,
                           color:
                               isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiary,
+                                  ? AppColors.surfaceVariantDark
+                                  : Colors.grey.shade200,
+                          child: Icon(
+                            Iconsax.shop,
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiary,
+                          ),
                         ),
-                      ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
+              const SizedBox(width: 14),
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color:
-                          isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    type,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Iconsax.clock,
-                        size: 14,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color:
                             isDark
-                                ? AppColors.textTertiaryDark
-                                : AppColors.textTertiary,
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        prepTime,
-                        style: TextStyle(
-                          fontSize: 12,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      type,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          Iconsax.clock,
+                          size: 14,
                           color:
                               isDark
                                   ? AppColors.textTertiaryDark
                                   : AppColors.textTertiary,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 4),
+                        Text(
+                          prepTime,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            StreamBuilder<DocumentSnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection("users")
-                      .doc(uid)
-                      .collection("favorites")
-                      .doc(storeId)
-                      .snapshots(),
-              builder: (_, favSnap) {
-                bool isFav = favSnap.data?.exists ?? false;
-                return GestureDetector(
-                  onTap:
-                      () => toggleFavorite(
-                        storeId,
-                        name,
-                        type,
-                        logoUrl,
-                        bannerUrl,
+              StreamBuilder<DocumentSnapshot>(
+                stream:
+                    FirebaseFirestore.instance
+                        .collection("users")
+                        .doc(uid)
+                        .collection("favorites")
+                        .doc(storeId)
+                        .snapshots(),
+                builder: (_, favSnap) {
+                  bool isFav = favSnap.data?.exists ?? false;
+                  return GestureDetector(
+                    onTap:
+                        () => toggleFavorite(
+                          storeId,
+                          name,
+                          type,
+                          logoUrl,
+                          bannerUrl,
+                        ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color:
+                            isFav
+                                ? AppColors.error.withOpacity(0.1)
+                                : (isDark
+                                    ? AppColors.surfaceVariantDark
+                                    : Colors.grey.shade100),
+                        shape: BoxShape.circle,
                       ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color:
-                          isFav
-                              ? AppColors.error.withOpacity(0.1)
-                              : (isDark
-                                  ? AppColors.surfaceVariantDark
-                                  : Colors.grey.shade100),
-                      shape: BoxShape.circle,
+                      child: Icon(
+                        isFav ? Iconsax.heart : Iconsax.heart,
+                        color:
+                            isFav
+                                ? AppColors.error
+                                : (isDark
+                                    ? AppColors.textTertiaryDark
+                                    : Colors.grey),
+                        size: 22,
+                      ),
                     ),
-                    child: Icon(
-                      isFav ? Iconsax.heart : Iconsax.heart,
-                      color:
-                          isFav
-                              ? AppColors.error
-                              : (isDark
-                                  ? AppColors.textTertiaryDark
-                                  : Colors.grey),
-                      size: 22,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

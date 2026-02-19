@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../services/notification_service.dart';
 
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
@@ -775,6 +776,20 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       print(
         "⚠️ Global /orders/$orderId missing or blocked. Skipping. Error: $e",
       );
+    }
+    // 3) Send push notification to customer
+    try {
+      await NotificationService.sendOrderStatusNotification(
+        orderId: orderId,
+        storeId: storeId,
+        customerId: userId,
+        status: newStatus,
+        storeName: 'Your store',
+        pickupNumber: null,
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print("⚠️ Failed to send notification: $e");
     }
   }
 }

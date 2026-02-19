@@ -426,6 +426,7 @@ class _StorePageState extends State<StorePage> {
 
   Widget _gridItem(QueryDocumentSnapshot doc, bool isDark) {
     final data = doc.data() as Map<String, dynamic>;
+    final isAvailable = data['isAvailable'] ?? true;
 
     return StreamBuilder<QuerySnapshot>(
       stream:
@@ -442,77 +443,107 @@ class _StorePageState extends State<StorePage> {
         }
 
         return GestureDetector(
-          onTap: () => _openProduct(doc.id),
+          onTap: isAvailable ? () => _openProduct(doc.id) : null,
           child: Stack(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          data["imageUrl"] ?? '',
-                          fit: BoxFit.contain,
-                          errorBuilder:
-                              (_, __, ___) => Container(
-                                color:
-                                    isDark
-                                        ? AppColors.surfaceVariantDark
-                                        : Colors.grey.shade100,
-                                child: Icon(
-                                  Iconsax.image,
+              Opacity(
+                opacity: isAvailable ? 1.0 : 0.5,
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            data["imageUrl"] ?? '',
+                            fit: BoxFit.contain,
+                            errorBuilder:
+                                (_, __, ___) => Container(
                                   color:
                                       isDark
-                                          ? AppColors.textTertiaryDark
-                                          : AppColors.textTertiary,
+                                          ? AppColors.surfaceVariantDark
+                                          : Colors.grey.shade100,
+                                  child: Icon(
+                                    Iconsax.image,
+                                    color:
+                                        isDark
+                                            ? AppColors.textTertiaryDark
+                                            : AppColors.textTertiary,
+                                  ),
                                 ),
-                              ),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      data["name"] ?? '',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
+                      const SizedBox(height: 8),
+                      Text(
+                        data["name"] ?? '',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "\u20b1${data["price"]}",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color:
-                            isDark ? AppColors.primaryLight : AppColors.primary,
+                      const SizedBox(height: 4),
+                      Text(
+                        "\u20b1${data["price"]}",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color:
+                              isDark
+                                  ? AppColors.primaryLight
+                                  : AppColors.primary,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
-              if (qty > 0)
+              // Out of Stock badge
+              if (!isAvailable)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'OUT OF STOCK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+
+              if (qty > 0 && isAvailable)
                 Positioned(
                   top: 8,
                   right: 8,

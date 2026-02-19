@@ -69,6 +69,11 @@ class AppColors {
   static const Color statusDone = Color(0xFF8E8E93);
   static const Color statusCancelled = Color(0xFFFF3B30);
 
+  // Merchant Theme Colors
+  static const Color merchantPrimary = Color(0xFFFF9500);
+  static const Color merchantPrimaryLight = Color(0xFFFFB84D);
+  static const Color merchantPrimaryDark = Color(0xFFCC7700);
+
   // Shadows
   static Color shadowLight = Colors.black.withValues(alpha: 0.06);
   static Color shadowMedium = Colors.black.withValues(alpha: 0.1);

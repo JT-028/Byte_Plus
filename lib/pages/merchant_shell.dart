@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'merchant_orders_page.dart';
 import 'merchant_profile_page.dart';
+import 'manage_menu_page.dart';
+import 'analytics_page.dart';
 
 class MerchantShell extends StatefulWidget {
   const MerchantShell({super.key});
@@ -25,8 +27,8 @@ class _MerchantShellState extends State<MerchantShell> {
         index: selectedNav,
         children: const [
           MerchantOrdersPage(),
-          _PlaceholderPage(title: "Menu (Coming soon)"),
-          _PlaceholderPage(title: "Analytics (Coming soon)"),
+          ManageMenuPage(),
+          AnalyticsPage(),
           MerchantProfilePage(),
         ],
       ),
