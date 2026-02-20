@@ -293,7 +293,7 @@ class AddButton extends StatelessWidget {
 
     if (showQuantity && quantity > 0) {
       return Semantics(
-        label: '${quantity} in cart',
+        label: '$quantity in cart',
         child: Container(
           width: 32,
           height: 32,

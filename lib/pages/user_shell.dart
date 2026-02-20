@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../services/order_service.dart';
 import '../services/cart_service.dart';
 import '../utils/responsive_utils.dart';
+import '../widgets/app_modal_dialog.dart';
 import 'store_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
@@ -1377,27 +1378,27 @@ class _CartPageState extends State<CartPage> {
                     await CartService.clearCart();
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text("Order placed successfully!"),
-                        backgroundColor: AppColors.success,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                    await AppModalDialog.success(
+                      context: context,
+                      title: 'Order Successful!',
+                      message: 'Your order has been placed successfully.',
+                      primaryLabel: 'View My Order',
+                      onPrimaryPressed: () {
+                        Navigator.pop(context);
+                        setState(() => selectedNav = 2);
+                      },
+                      secondaryLabel: 'Back to Home',
+                      onSecondaryPressed: () {
+                        Navigator.pop(context);
+                        setState(() => selectedNav = 0);
+                      },
                     );
                   } catch (e) {
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Failed to place order: $e"),
-                        backgroundColor: AppColors.error,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                    await AppModalDialog.error(
+                      context: context,
+                      title: 'Order Failed',
+                      message: 'Failed to place order: $e',
                     );
                   }
                 },

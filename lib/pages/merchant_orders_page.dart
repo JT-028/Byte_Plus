@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
@@ -458,8 +459,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                     );
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Order accepted.")),
+                    await AppModalDialog.success(
+                      context: context,
+                      title: 'Order Accepted',
+                      message:
+                          'The order has been accepted and is now in progress.',
                     );
                   },
                 ),
@@ -483,8 +487,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                     );
 
                     if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Order cancelled.")),
+                    await AppModalDialog.info(
+                      context: context,
+                      title: 'Order Cancelled',
+                      message: 'The order has been cancelled.',
                     );
                   },
                 ),
@@ -500,9 +506,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 },
               );
               if (!mounted) return;
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text("Marked as ready.")));
+              await AppModalDialog.success(
+                context: context,
+                title: 'Order Ready',
+                message: 'The order is now ready for pickup.',
+              );
             },
             onPickedUp: () async {
               await _updateOrderStatusEverywhere(
@@ -516,8 +524,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 },
               );
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Completed (Picked up).")),
+              await AppModalDialog.success(
+                context: context,
+                title: 'Order Completed',
+                message: 'The order has been marked as picked up.',
               );
             },
           ),
@@ -696,31 +706,15 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     required Color confirmColor,
     required Future<void> Function() onConfirm,
   }) async {
-    final ok = await showDialog<bool>(
+    final isDanger =
+        confirmColor == Colors.red || confirmColor == AppColors.error;
+    final ok = await AppModalDialog.confirm(
       context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          content: Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("No"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: confirmColor),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(
-                confirmText,
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+      title: title,
+      message: message,
+      confirmLabel: confirmText,
+      cancelLabel: 'No',
+      isDanger: isDanger,
     );
 
     if (ok == true) {

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class MerchantProfilePage extends StatelessWidget {
   const MerchantProfilePage({super.key});
@@ -112,7 +113,7 @@ class MerchantProfilePage extends StatelessWidget {
                         return Switch(
                           value: themeService.isDarkMode,
                           onChanged: (_) => themeService.toggleTheme(),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         );
                       },
                     ),
@@ -142,56 +143,12 @@ class MerchantProfilePage extends StatelessWidget {
                     ),
                   ),
                   onPressed: () async {
-                    final ok = await showDialog<bool>(
+                    final ok = await AppModalDialog.confirm(
                       context: context,
-                      builder:
-                          (_) => AlertDialog(
-                            backgroundColor:
-                                isDark ? AppColors.surfaceDark : Colors.white,
-                            title: Text(
-                              "Log out?",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color:
-                                    isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary,
-                              ),
-                            ),
-                            content: Text(
-                              "Are you sure you want to log out?",
-                              style: TextStyle(
-                                color:
-                                    isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondary,
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context, false),
-                                child: Text(
-                                  "No",
-                                  style: TextStyle(
-                                    color:
-                                        isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                ),
-                                onPressed: () => Navigator.pop(context, true),
-                                child: const Text(
-                                  "Yes",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
+                      title: 'Log Out?',
+                      message: 'Are you sure you want to log out?',
+                      confirmLabel: 'Yes, Log Out',
+                      cancelLabel: 'Cancel',
                     );
 
                     if (ok == true) {

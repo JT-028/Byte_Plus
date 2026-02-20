@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/app_modal_dialog.dart';
+
 class FoodDetailPopup extends StatefulWidget {
   final String name;
   final double price;
@@ -49,11 +51,17 @@ class _FoodDetailPopupState extends State<FoodDetailPopup> {
           const SizedBox(height: 8),
           Text(
             '₱${widget.price.toStringAsFixed(2)}',
-            style: const TextStyle(fontSize: 18, color: Colors.redAccent, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.redAccent,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text('No description available.',
-              style: TextStyle(color: Colors.black54)),
+          const Text(
+            'No description available.',
+            style: TextStyle(color: Colors.black54),
+          ),
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -64,7 +72,13 @@ class _FoodDetailPopupState extends State<FoodDetailPopup> {
                   if (qty > 1) setState(() => qty--);
                 },
               ),
-              Text('$qty', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                '$qty',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline, size: 30),
                 onPressed: () => setState(() => qty++),
@@ -90,8 +104,10 @@ class _FoodDetailPopupState extends State<FoodDetailPopup> {
                   });
                 }
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${widget.name} added to cart')),
+                AppModalDialog.success(
+                  context: context,
+                  title: 'Added to Cart',
+                  message: '${widget.name} has been added to your cart.',
                 );
               },
               child: const Text(

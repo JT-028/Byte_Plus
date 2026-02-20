@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -564,33 +565,20 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   // CONFIRMATION DIALOG
-  void _confirmCancel(String orderId) {
-    showDialog(
+  void _confirmCancel(String orderId) async {
+    final ok = await AppModalDialog.confirm(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Cancel Order?"),
-            content: const Text(
-              "Are you sure you want to cancel this order? This cannot be undone.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("No"),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _cancelOrderEverywhere(orderId);
-                },
-                child: Text(
-                  "Yes, Cancel",
-                  style: TextStyle(color: AppColors.error),
-                ),
-              ),
-            ],
-          ),
+      title: 'Cancel Order?',
+      message:
+          'Are you sure you want to cancel this order? This cannot be undone.',
+      confirmLabel: 'Yes, Cancel',
+      cancelLabel: 'No',
+      isDanger: true,
     );
+
+    if (ok == true) {
+      _cancelOrderEverywhere(orderId);
+    }
   }
 
   // -------------------------------------------------------------

@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
+import '../widgets/app_modal_dialog.dart';
 import 'login_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -105,11 +106,6 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       _showSuccess('Account created successfully!');
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showError(_getFirebaseErrorMessage(e.code));
@@ -135,28 +131,26 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-      ),
+    AppModalDialog.error(
+      context: context,
+      title: 'Registration Failed',
+      message: message,
     );
   }
 
   void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-      ),
+    AppModalDialog.success(
+      context: context,
+      title: 'Success!',
+      message: message,
+      primaryLabel: 'Continue to Login',
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      },
     );
   }
 

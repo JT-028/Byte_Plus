@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../theme/app_theme.dart';
-import '../utils/snackbar_utils.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class PersonalInfoPage extends StatefulWidget {
   const PersonalInfoPage({super.key});
@@ -248,11 +248,11 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   // UI HELPERS
   // ---------------------------------------------------------------------------
   void _error(String msg) {
-    AppSnackbar.error(context, msg);
+    AppModalDialog.error(context: context, title: 'Error', message: msg);
   }
 
   void _success(String msg) {
-    AppSnackbar.success(context, msg);
+    AppModalDialog.success(context: context, title: 'Success', message: msg);
   }
 
   String _firebaseError(String e) {

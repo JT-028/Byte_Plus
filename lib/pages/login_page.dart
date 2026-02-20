@@ -4,6 +4,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
+import '../widgets/app_modal_dialog.dart';
 import '../pages/register_page.dart';
 import 'forgot_password_page.dart';
 import 'splash_page.dart';
@@ -99,15 +100,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
-      ),
+    AppModalDialog.error(
+      context: context,
+      title: 'Login Failed',
+      message: message,
     );
   }
 

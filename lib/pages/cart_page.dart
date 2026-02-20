@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../services/order_service.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -292,14 +293,27 @@ class _CartPageState extends State<CartPage> {
       await batch.commit();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Order placed! Your number is $orderId")),
+      await AppModalDialog.success(
+        context: context,
+        title: 'Order Successful!',
+        message: 'Your order #$orderId has been placed.',
+        primaryLabel: 'View My Order',
+        onPrimaryPressed: () {
+          Navigator.pop(context);
+          Navigator.pushNamed(context, '/orders');
+        },
+        secondaryLabel: 'Back to Home',
+        onSecondaryPressed: () {
+          Navigator.pop(context);
+        },
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to place order: $e")));
+      await AppModalDialog.error(
+        context: context,
+        title: 'Order Failed',
+        message: 'Failed to place order: $e',
+      );
     } finally {
       if (mounted) setState(() => _placing = false);
     }

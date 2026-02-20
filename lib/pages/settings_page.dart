@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/app_modal_dialog.dart';
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -54,8 +56,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }, SetOptions(merge: true));
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Geofence updated.')));
+    await AppModalDialog.success(
+      context: context,
+      title: 'Settings Saved',
+      message: 'Geofence settings have been updated.',
+    );
   }
 
   @override
@@ -70,14 +75,17 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Profile',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const Text(
+            'Profile',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
           const SizedBox(height: 10),
           FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            future: FirebaseFirestore.instance
-                .collection('users')
-                .doc(user.uid)
-                .get(),
+            future:
+                FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .get(),
             builder: (_, snap) {
               final data = snap.data?.data() ?? {};
               return ListTile(
@@ -90,8 +98,10 @@ class _SettingsPageState extends State<SettingsPage> {
           const Divider(height: 32),
 
           if (_isAdmin) ...[
-            const Text('Geofence Settings (Admin Only)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const Text(
+              'Geofence Settings (Admin Only)',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: _lat,
@@ -113,8 +123,9 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: _save,
               icon: const Icon(Icons.save),
               label: const Text('Save Geofence'),
-              style:
-                  ElevatedButton.styleFrom(backgroundColor: Colors.orangeAccent),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orangeAccent,
+              ),
             ),
           ],
         ],

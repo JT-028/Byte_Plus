@@ -21,6 +21,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   SalesSummary? summary;
   List<DailyRevenue>? revenueHistory;
   bool isLoading = true;
+  bool storeIdLoaded = false;
+  String? errorMessage;
 
   final periodLabels = ['Today', 'This Week', 'This Month'];
 
@@ -32,16 +34,43 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Future<void> _loadStoreId() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
-
-    if (userDoc.exists) {
+    if (uid == null) {
       setState(() {
-        storeId = userDoc.data()?['storeId']?.toString();
+        storeIdLoaded = true;
+        isLoading = false;
+        errorMessage = 'Not logged in';
       });
-      _loadAnalytics();
+      return;
+    }
+
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+      if (userDoc.exists) {
+        final loadedStoreId = userDoc.data()?['storeId']?.toString();
+        setState(() {
+          storeId = (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
+          storeIdLoaded = true;
+        });
+        if (storeId != null) {
+          _loadAnalytics();
+        } else {
+          setState(() => isLoading = false);
+        }
+      } else {
+        setState(() {
+          storeIdLoaded = true;
+          isLoading = false;
+          errorMessage = 'User profile not found';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        storeIdLoaded = true;
+        isLoading = false;
+        errorMessage = 'Failed to load store: $e';
+      });
     }
   }
 
@@ -90,8 +119,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child:
-            storeId == null
+            !storeIdLoaded
                 ? const Center(child: CircularProgressIndicator())
+                : storeId == null
+                ? _buildNoStoreMessage(isDark)
                 : RefreshIndicator(
                   onRefresh: _loadAnalytics,
                   child: CustomScrollView(
@@ -118,6 +149,48 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     ],
                   ),
                 ),
+      ),
+    );
+  }
+
+  Widget _buildNoStoreMessage(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Iconsax.chart,
+              size: 80,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              errorMessage ?? 'No Store Connected',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Analytics will be available once your store is set up.',
+              style: TextStyle(
+                fontSize: 14,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -323,8 +396,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Widget _buildRevenueChart(bool isDark) {
-    if (revenueHistory == null || revenueHistory!.isEmpty)
+    if (revenueHistory == null || revenueHistory!.isEmpty) {
       return const SizedBox();
+    }
 
     final maxRevenue = revenueHistory!
         .map((e) => e.revenue)

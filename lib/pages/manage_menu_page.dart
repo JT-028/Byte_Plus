@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../services/inventory_service.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class ManageMenuPage extends StatefulWidget {
   const ManageMenuPage({super.key});
@@ -18,6 +19,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   String? storeId;
   String selectedCategory = 'All';
   bool showUnavailableOnly = false;
+  bool storeIdLoaded = false;
 
   final nameController = TextEditingController();
   final priceController = TextEditingController();
@@ -32,15 +34,27 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
 
   Future<void> _loadStoreId() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    if (uid == null) {
+      setState(() => storeIdLoaded = true);
+      return;
+    }
 
-    final userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
-    if (userDoc.exists) {
-      setState(() {
-        storeId = userDoc.data()?['storeId']?.toString();
-      });
+      if (userDoc.exists) {
+        final loadedStoreId = userDoc.data()?['storeId']?.toString();
+        setState(() {
+          storeId = (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
+          storeIdLoaded = true;
+        });
+      } else {
+        setState(() => storeIdLoaded = true);
+      }
+    } catch (e) {
+      setState(() => storeIdLoaded = true);
+      debugPrint('Error loading storeId: $e');
     }
   }
 
@@ -61,15 +75,13 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      await AppModalDialog.success(
+        context: context,
+        title: currentStatus ? 'Item Unavailable' : 'Item Available',
+        message:
             currentStatus
-                ? 'Item marked as unavailable'
-                : 'Item is now available',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
+                ? 'This item has been marked as unavailable.'
+                : 'This item is now available for ordering.',
       );
     }
   }
@@ -84,8 +96,10 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     final category = categoryController.text.trim();
 
     if (name.isEmpty || priceText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and price are required')),
+      await AppModalDialog.warning(
+        context: context,
+        title: 'Missing Information',
+        message: 'Name and price are required.',
       );
       return;
     }
@@ -105,21 +119,26 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
       data['createdAt'] = FieldValue.serverTimestamp();
       await menuCollection.add(data);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item added successfully')),
+        Navigator.pop(context);
+        await AppModalDialog.success(
+          context: context,
+          title: 'Item Added',
+          message: 'The menu item has been added successfully.',
         );
       }
     } else {
       await menuCollection.doc(id).update(data);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item updated successfully')),
+        Navigator.pop(context);
+        await AppModalDialog.success(
+          context: context,
+          title: 'Item Updated',
+          message: 'The menu item has been updated successfully.',
         );
       }
     }
 
     _clearControllers();
-    if (mounted) Navigator.pop(context);
   }
 
   void _clearControllers() {
@@ -304,11 +323,61 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    if (storeId == null) {
+    if (!storeIdLoaded) {
       return Scaffold(
         backgroundColor:
             isDark ? AppColors.backgroundDark : AppColors.background,
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (storeId == null) {
+      return Scaffold(
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.background,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Iconsax.box_1,
+                  size: 80,
+                  color:
+                      isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'No Store Connected',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Menu management will be available once your store is set up.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

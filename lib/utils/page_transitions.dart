@@ -199,6 +199,7 @@ class SlideUpRoute<T> extends PageRouteBuilder<T> {
   final Widget page;
   final Duration duration;
   final Curve curve;
+  @override
   final bool fullscreenDialog;
 
   SlideUpRoute({

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
+import '../widgets/app_modal_dialog.dart';
 import 'favorites_page.dart';
 import 'personal_info_page.dart';
 import 'login_page.dart';
@@ -108,7 +109,7 @@ class ProfilePage extends StatelessWidget {
                         builder: (context, themeService, child) {
                           return Switch(
                             value: themeService.themeMode == ThemeMode.dark,
-                            activeColor:
+                            activeThumbColor:
                                 isDark
                                     ? AppColors.primaryLight
                                     : AppColors.primary,
@@ -239,6 +240,16 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           onPressed: () async {
+            final ok = await AppModalDialog.confirm(
+              context: context,
+              title: 'Log Out?',
+              message: 'Are you sure you want to log out?',
+              confirmLabel: 'Yes, Log Out',
+              cancelLabel: 'Cancel',
+            );
+
+            if (ok != true) return;
+
             await FirebaseAuth.instance.signOut();
             if (!context.mounted) return;
 
