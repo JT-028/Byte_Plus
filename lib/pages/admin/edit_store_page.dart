@@ -509,8 +509,52 @@ class _EditStorePageState extends State<EditStorePage> {
     });
 
     try {
+      debugPrint(
+        '[EditStorePage] Uploading ${isLogo ? "logo" : "banner"} to Cloudinary...',
+      );
       final url = await CloudinaryService.uploadImage(file);
-      return url ?? existingUrl;
+
+      if (url != null) {
+        debugPrint('[EditStorePage] Upload successful: $url');
+        // Update state with the uploaded URL and clear the selected file
+        if (mounted) {
+          setState(() {
+            if (isLogo) {
+              _logoUrl = url;
+              _selectedLogoFile = null;
+            } else {
+              _bannerUrl = url;
+              _selectedBannerFile = null;
+            }
+          });
+        }
+        return url;
+      } else {
+        debugPrint('[EditStorePage] Upload failed, keeping existing URL');
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to upload ${isLogo ? "logo" : "banner"}. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return existingUrl;
+      }
+    } catch (e) {
+      debugPrint('[EditStorePage] Upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return existingUrl;
     } finally {
       if (mounted) {
         setState(() {
@@ -570,7 +614,7 @@ class _EditStorePageState extends State<EditStorePage> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        // Show success dialog first, then pop the page
         await AppModalDialog.success(
           context: context,
           title: isEditing ? 'Store Updated' : 'Store Created',
@@ -579,6 +623,9 @@ class _EditStorePageState extends State<EditStorePage> {
                   ? 'The store has been updated successfully.'
                   : 'The store has been created successfully.',
         );
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -614,12 +661,15 @@ class _EditStorePageState extends State<EditStorePage> {
             .delete();
 
         if (mounted) {
-          Navigator.pop(context);
+          // Show success dialog first, then pop the page
           await AppModalDialog.success(
             context: context,
             title: 'Store Deleted',
             message: 'The store has been deleted.',
           );
+          if (mounted) {
+            Navigator.pop(context);
+          }
         }
       } catch (e) {
         if (mounted) {

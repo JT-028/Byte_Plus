@@ -955,8 +955,43 @@ class _AddItemPageState extends State<AddItemPage> {
     setState(() => _isUploadingImage = true);
 
     try {
+      debugPrint('[AddItemPage] Uploading image to Cloudinary...');
       final url = await CloudinaryService.uploadImage(_selectedImageFile!);
-      return url;
+
+      if (url != null) {
+        debugPrint('[AddItemPage] Upload successful: $url');
+        // Update state with the uploaded URL and clear the selected file
+        if (mounted) {
+          setState(() {
+            _imageUrl = url;
+            _selectedImageFile = null;
+          });
+        }
+        return url;
+      } else {
+        debugPrint('[AddItemPage] Upload failed, keeping existing URL');
+        // Show error to user
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to upload image. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return _imageUrl;
+      }
+    } catch (e) {
+      debugPrint('[AddItemPage] Upload error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return _imageUrl;
     } finally {
       if (mounted) {
         setState(() => _isUploadingImage = false);
@@ -1445,7 +1480,7 @@ class _AddItemPageState extends State<AddItemPage> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        // Show success dialog first, then pop the page
         await AppModalDialog.success(
           context: context,
           title: isEditing ? 'Product Updated' : 'Product Added',
@@ -1454,6 +1489,9 @@ class _AddItemPageState extends State<AddItemPage> {
                   ? 'The product has been updated successfully.'
                   : 'The product has been added to the menu.',
         );
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1492,12 +1530,15 @@ class _AddItemPageState extends State<AddItemPage> {
       await _menuCollection.doc(widget.itemId).delete();
 
       if (mounted) {
-        Navigator.pop(context);
+        // Show success dialog first, then pop the page
         await AppModalDialog.success(
           context: context,
           title: 'Product Deleted',
           message: 'The product has been deleted successfully.',
         );
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {

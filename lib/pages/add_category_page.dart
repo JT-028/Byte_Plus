@@ -251,12 +251,15 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
       await _categoriesCollection.doc(widget.categoryId).delete();
 
       if (mounted) {
-        Navigator.pop(context);
+        // Show success dialog first, then pop the page
         await AppModalDialog.success(
           context: context,
           title: 'Category Deleted',
           message: 'The category has been deleted successfully.',
         );
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -303,7 +306,7 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
       }
 
       if (mounted) {
-        Navigator.pop(context);
+        // Show success dialog first, then pop the page
         await AppModalDialog.success(
           context: context,
           title: isEditing ? 'Category Updated' : 'Category Added',
@@ -312,6 +315,9 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
                   ? 'The category has been updated successfully.'
                   : 'The category has been added.',
         );
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
