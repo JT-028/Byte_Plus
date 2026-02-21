@@ -35,6 +35,21 @@ class _EditStorePageState extends State<EditStorePage> {
   bool _isActive = true;
   bool _isLoading = false;
 
+  // Category
+  static const List<String> _categoryOptions = [
+    'Drinks',
+    'Burger',
+    'Coffee',
+    'Chicken',
+    'Snacks',
+    'Desserts',
+  ];
+  String? _selectedCategory;
+
+  // Operating Hours
+  TimeOfDay? _openingTime;
+  TimeOfDay? _closingTime;
+
   bool get isEditing => widget.storeId != null;
 
   @override
@@ -52,6 +67,24 @@ class _EditStorePageState extends State<EditStorePage> {
     _logoUrl = data['logoUrl']?.toString();
     _bannerUrl = data['bannerUrl']?.toString();
     _isActive = data['isActive'] ?? true;
+
+    // Load category
+    final cats = data['category'] as List<dynamic>?;
+    if (cats != null && cats.isNotEmpty) {
+      _selectedCategory = cats.first.toString();
+    }
+
+    // Load operating hours
+    final openStr = data['openingTime']?.toString();
+    final closeStr = data['closingTime']?.toString();
+    if (openStr != null && openStr.contains(':')) {
+      final parts = openStr.split(':');
+      _openingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    }
+    if (closeStr != null && closeStr.contains(':')) {
+      final parts = closeStr.split(':');
+      _closingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+    }
   }
 
   @override
@@ -103,6 +136,8 @@ class _EditStorePageState extends State<EditStorePage> {
                 const SizedBox(height: 20),
                 _buildImagesSection(isDark),
                 const SizedBox(height: 20),
+                _buildOperatingHoursSection(isDark),
+                const SizedBox(height: 20),
                 _buildStatusSection(isDark),
                 const SizedBox(height: 32),
                 _buildSaveButton(isDark),
@@ -136,6 +171,161 @@ class _EditStorePageState extends State<EditStorePage> {
           'Enter description',
           isDark,
           maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        _labelText('Category', isDark),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: _selectedCategory,
+          decoration: InputDecoration(
+            hintText: 'Select a category',
+            hintStyle: TextStyle(
+              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
+            filled: true,
+            fillColor: isDark ? AppColors.backgroundDark : Colors.grey.shade50,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.border,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.border,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary),
+            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+          dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+          style: TextStyle(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+          items: _categoryOptions.map((cat) {
+            return DropdownMenuItem(value: cat, child: Text(cat));
+          }).toList(),
+          onChanged: (val) => setState(() => _selectedCategory = val),
+        ),
+      ],
+    );
+  }
+
+  String _formatTimeOfDay(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final min = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$min $period';
+  }
+
+  Future<void> _pickTime({required bool isOpening}) async {
+    final initial = isOpening
+        ? (_openingTime ?? const TimeOfDay(hour: 8, minute: 0))
+        : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null) {
+      setState(() {
+        if (isOpening) {
+          _openingTime = picked;
+        } else {
+          _closingTime = picked;
+        }
+      });
+    }
+  }
+
+  Widget _buildOperatingHoursSection(bool isDark) {
+    return _sectionCard(
+      isDark: isDark,
+      title: 'Operating Hours',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelText('Opening Time', isDark),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _pickTime(isOpening: true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.backgroundDark : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? AppColors.borderDark : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Iconsax.clock, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Text(
+                            _openingTime != null
+                                ? _formatTimeOfDay(_openingTime!)
+                                : 'Set time',
+                            style: TextStyle(
+                              color: _openingTime != null
+                                  ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)
+                                  : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelText('Closing Time', isDark),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _pickTime(isOpening: false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.backgroundDark : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? AppColors.borderDark : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Iconsax.clock, size: 18, color: AppColors.primary),
+                          const SizedBox(width: 10),
+                          Text(
+                            _closingTime != null
+                                ? _formatTimeOfDay(_closingTime!)
+                                : 'Set time',
+                            style: TextStyle(
+                              color: _closingTime != null
+                                  ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)
+                                  : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -594,13 +784,20 @@ class _EditStorePageState extends State<EditStorePage> {
         false,
       );
 
-      final data = {
+      final data = <String, dynamic>{
         'name': name,
         'description': _descriptionController.text.trim(),
         'logoUrl': logoUrl ?? '',
         'bannerUrl': bannerUrl ?? '',
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
+        'category': _selectedCategory != null ? [_selectedCategory] : [],
+        'openingTime': _openingTime != null
+            ? '${_openingTime!.hour.toString().padLeft(2, '0')}:${_openingTime!.minute.toString().padLeft(2, '0')}'
+            : null,
+        'closingTime': _closingTime != null
+            ? '${_closingTime!.hour.toString().padLeft(2, '0')}:${_closingTime!.minute.toString().padLeft(2, '0')}'
+            : null,
       };
 
       if (isEditing) {

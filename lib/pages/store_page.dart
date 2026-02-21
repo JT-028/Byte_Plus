@@ -12,19 +12,25 @@ import 'cart_store_sheet.dart';
 class StorePage extends StatefulWidget {
   final String storeId;
   final String name;
+  final String description;
   final String type;
   final String prepTime;
   final String logoUrl;
   final String bannerUrl;
+  final String? openingTime;
+  final String? closingTime;
 
   const StorePage({
     super.key,
     required this.storeId,
     required this.name,
+    this.description = '',
     required this.type,
     required this.prepTime,
     required this.logoUrl,
     required this.bannerUrl,
+    this.openingTime,
+    this.closingTime,
   });
 
   @override
@@ -234,6 +240,12 @@ class _StorePageState extends State<StorePage> {
   }
 
   Widget _storeInfoCard(bool isDark) {
+    // Format operating hours
+    String? hoursText;
+    if (widget.openingTime != null && widget.closingTime != null) {
+      hoursText = '${_formatTime(widget.openingTime!)} – ${_formatTime(widget.closingTime!)}';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -302,46 +314,91 @@ class _StorePageState extends State<StorePage> {
                             : AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  widget.type,
-                  style: TextStyle(
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(
-                      Iconsax.clock,
-                      size: 14,
+                if (widget.description.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
                       color:
                           isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiary,
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      widget.prepTime,
-                      style: TextStyle(
-                        fontSize: 13,
+                  ),
+                ],
+                const SizedBox(height: 6),
+                if (hoursText != null)
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.clock,
+                        size: 14,
                         color:
                             isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          hoursText,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color:
+                                isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.clock,
+                        size: 14,
+                        color:
+                            isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.prepTime,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatTime(String time) {
+    if (!time.contains(':')) return time;
+    final parts = time.split(':');
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    final t = TimeOfDay(hour: hour, minute: minute);
+    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final m = t.minute.toString().padLeft(2, '0');
+    final p = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$h:$m $p';
   }
 
   Widget _buildMenuSections(bool isDark) {

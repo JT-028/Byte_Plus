@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -10,8 +11,85 @@ import '../widgets/app_modal_dialog.dart';
 import 'login_page.dart';
 import 'printer_settings_page.dart';
 
-class MerchantProfilePage extends StatelessWidget {
+class MerchantProfilePage extends StatefulWidget {
   const MerchantProfilePage({super.key});
+
+  @override
+  State<MerchantProfilePage> createState() => _MerchantProfilePageState();
+}
+
+class _MerchantProfilePageState extends State<MerchantProfilePage> {
+  String? _storeId;
+  TimeOfDay? _openingTime;
+  TimeOfDay? _closingTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStoreData();
+  }
+
+  Future<void> _loadStoreData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final storeId = userDoc.data()?['storeId']?.toString();
+    if (storeId == null || storeId.isEmpty) return;
+
+    final storeDoc = await FirebaseFirestore.instance.collection('stores').doc(storeId).get();
+    final data = storeDoc.data();
+    if (data == null) return;
+
+    final openStr = data['openingTime']?.toString();
+    final closeStr = data['closingTime']?.toString();
+
+    if (mounted) {
+      setState(() {
+        _storeId = storeId;
+        if (openStr != null && openStr.contains(':')) {
+          final parts = openStr.split(':');
+          _openingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        }
+        if (closeStr != null && closeStr.contains(':')) {
+          final parts = closeStr.split(':');
+          _closingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+        }
+      });
+    }
+  }
+
+  String _formatTimeOfDay(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final min = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$min $period';
+  }
+
+  Future<void> _pickTime({required bool isOpening}) async {
+    final initial = isOpening
+        ? (_openingTime ?? const TimeOfDay(hour: 8, minute: 0))
+        : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked != null && _storeId != null) {
+      setState(() {
+        if (isOpening) {
+          _openingTime = picked;
+        } else {
+          _closingTime = picked;
+        }
+      });
+      // Save to Firestore
+      final timeStr = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(_storeId)
+          .update({isOpening ? 'openingTime' : 'closingTime': timeStr});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,6 +300,175 @@ class MerchantProfilePage extends StatelessWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Operating Hours
+              if (_storeId != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isDark
+                            ? AppColors.surfaceDark
+                            : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Iconsax.clock,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              "Operating Hours",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _pickTime(isOpening: true),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.backgroundDark
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppColors.borderDark
+                                        : AppColors.border,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Opens',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _openingTime != null
+                                          ? _formatTimeOfDay(_openingTime!)
+                                          : 'Set time',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: _openingTime != null
+                                            ? AppColors.primary
+                                            : (isDark
+                                                ? AppColors.textTertiaryDark
+                                                : AppColors.textTertiary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              '–',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _pickTime(isOpening: false),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? AppColors.backgroundDark
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? AppColors.borderDark
+                                        : AppColors.border,
+                                  ),
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      'Closes',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _closingTime != null
+                                          ? _formatTimeOfDay(_closingTime!)
+                                          : 'Set time',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: _closingTime != null
+                                            ? AppColors.primary
+                                            : (isDark
+                                                ? AppColors.textTertiaryDark
+                                                : AppColors.textTertiary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+              if (_storeId != null) const SizedBox(height: 12),
 
               const Spacer(),
 

@@ -1,4 +1,5 @@
 // lib/pages/user_shell.dart
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../utils/responsive_utils.dart';
 import '../widgets/app_modal_dialog.dart';
 import '../widgets/pickup_time_picker.dart';
 import 'store_page.dart';
+import 'product_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
 
@@ -21,7 +23,10 @@ class UserShell extends StatefulWidget {
   State<UserShell> createState() => _UserShellState();
 }
 
-class _UserShellState extends State<UserShell> {
+class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   int selectedNav = 0;
   int selectedCategory = 0;
 
@@ -33,13 +38,100 @@ class _UserShellState extends State<UserShell> {
     "Burger",
     "Coffee",
     "Chicken",
+    "Snacks",
+    "Desserts",
   ];
+
+  // Search
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  List<Map<String, dynamic>> _productResults = [];
+  bool _isSearchingProducts = false;
+  Timer? _debounceTimer;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  String _formatStoreTime(String? time) {
+    if (time == null || !time.contains(':')) return '';
+    final parts = time.split(':');
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    final t = TimeOfDay(hour: hour, minute: minute);
+    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final m = t.minute.toString().padLeft(2, '0');
+    final p = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$h:$m $p';
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() => _searchQuery = query.trim());
+    _debounceTimer?.cancel();
+    if (query.trim().isNotEmpty) {
+      _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+        _searchProducts(query.trim());
+      });
+    } else {
+      setState(() {
+        _productResults = [];
+        _isSearchingProducts = false;
+      });
+    }
+  }
+
+  Future<void> _searchProducts(String query) async {
+    setState(() => _isSearchingProducts = true);
+    try {
+      final storesSnap = await FirebaseFirestore.instance.collection('stores').get();
+      final results = <Map<String, dynamic>>[];
+      final lowerQuery = query.toLowerCase();
+
+      for (final storeDoc in storesSnap.docs) {
+        final storeData = storeDoc.data();
+        final menuSnap = await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeDoc.id)
+            .collection('menu')
+            .get();
+
+        for (final menuDoc in menuSnap.docs) {
+          final menuData = menuDoc.data();
+          final name = (menuData['name'] ?? '').toString().toLowerCase();
+          if (name.contains(lowerQuery)) {
+            results.add({
+              'productId': menuDoc.id,
+              'storeId': storeDoc.id,
+              'storeName': storeData['name'] ?? '',
+              'productName': menuData['name'] ?? '',
+              'price': menuData['price'] ?? 0,
+              'imageUrl': menuData['imageUrl'] ?? '',
+            });
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _productResults = results;
+          _isSearchingProducts = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isSearchingProducts = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // required for AutomaticKeepAliveClientMixin
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
       body: SafeArea(
         child: IndexedStack(
@@ -61,43 +153,47 @@ class _UserShellState extends State<UserShell> {
   // ---------------------------------------------------------------------------
 
   Widget _dashboardUI(bool isDark) {
-    return Stack(
-      children: [
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 300,
-          child: Container(
-            color: isDark ? AppColors.primaryLight : AppColors.primary,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Stack(
+        children: [
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 300,
+            child: Container(
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
           ),
-        ),
-        Positioned.fill(
-          top: 240,
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.backgroundDark : AppColors.background,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(32),
+          Positioned.fill(
+            top: 240,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.backgroundDark : AppColors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(32),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 35),
+                  _categoriesBar(isDark),
+                  const SizedBox(height: 14),
+                  Expanded(child: _storeList(isDark)),
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                const SizedBox(height: 35),
-                _categoriesBar(isDark),
-                const SizedBox(height: 14),
-                Expanded(child: _storeList(isDark)),
-              ],
-            ),
           ),
-        ),
-        Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: _topHeaderWithSearch(isDark),
-        ),
-      ],
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _topHeaderWithSearch(isDark),
+          ),
+        ],
+      ),
     );
   }
 
@@ -175,6 +271,8 @@ class _UserShellState extends State<UserShell> {
               ],
             ),
             child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
               decoration: InputDecoration(
                 prefixIcon: Icon(
                   Iconsax.search_normal,
@@ -183,6 +281,19 @@ class _UserShellState extends State<UserShell> {
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
                 ),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.close,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
                 hintText: "Search stores or food...",
                 hintStyle: TextStyle(
                   color:
@@ -259,6 +370,11 @@ class _UserShellState extends State<UserShell> {
   }
 
   Widget _storeList(bool isDark) {
+    // If searching, show search results instead
+    if (_searchQuery.isNotEmpty) {
+      return _searchResultsList(isDark);
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection("stores").snapshots(),
       builder: (context, snap) {
@@ -314,7 +430,6 @@ class _UserShellState extends State<UserShell> {
         final responsive = ResponsiveUtils.of(context);
         final isTabletOrLarger = !responsive.isMobile;
 
-        // Use grid layout for tablets and larger screens
         if (isTabletOrLarger) {
           return GridView.builder(
             padding: EdgeInsets.symmetric(
@@ -339,10 +454,13 @@ class _UserShellState extends State<UserShell> {
               return _storeCard(
                 storeId: doc.id,
                 name: data["name"] ?? "",
+                description: data["description"] ?? "",
                 type: data["type"] ?? "",
                 prepTime: data["prepTime"] ?? "",
                 logoUrl: data["logoUrl"] ?? "",
                 bannerUrl: data["bannerUrl"] ?? "",
+                openingTime: data["openingTime"],
+                closingTime: data["closingTime"],
                 isDark: isDark,
                 isGridItem: true,
               );
@@ -360,13 +478,163 @@ class _UserShellState extends State<UserShell> {
             return _storeCard(
               storeId: doc.id,
               name: data["name"] ?? "",
+              description: data["description"] ?? "",
               type: data["type"] ?? "",
               prepTime: data["prepTime"] ?? "",
               logoUrl: data["logoUrl"] ?? "",
               bannerUrl: data["bannerUrl"] ?? "",
+              openingTime: data["openingTime"],
+              closingTime: data["closingTime"],
               isDark: isDark,
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _searchResultsList(bool isDark) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('stores').snapshots(),
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final lowerQuery = _searchQuery.toLowerCase();
+
+        // Filter stores by name
+        final matchedStores = snap.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final name = (data['name'] ?? '').toString().toLowerCase();
+          return name.contains(lowerQuery);
+        }).toList();
+
+        final hasStores = matchedStores.isNotEmpty;
+        final hasProducts = _productResults.isNotEmpty;
+
+        if (!hasStores && !hasProducts && !_isSearchingProducts) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Iconsax.search_normal, size: 64,
+                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                const SizedBox(height: 16),
+                Text('No results for "$_searchQuery"',
+                  style: TextStyle(fontSize: 16,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+              ],
+            ),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          children: [
+            if (hasStores) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text('Stores', style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+              ),
+              ...matchedStores.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                return _storeCard(
+                  storeId: doc.id,
+                  name: data['name'] ?? '',
+                  description: data['description'] ?? '',
+                  type: data['type'] ?? '',
+                  prepTime: data['prepTime'] ?? '',
+                  logoUrl: data['logoUrl'] ?? '',
+                  bannerUrl: data['bannerUrl'] ?? '',
+                  openingTime: data['openingTime'],
+                  closingTime: data['closingTime'],
+                  isDark: isDark,
+                );
+              }),
+            ],
+            if (_isSearchingProducts)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(child: CircularProgressIndicator(
+                  color: isDark ? AppColors.primaryLight : AppColors.primary)),
+              ),
+            if (hasProducts) ...[
+              Padding(
+                padding: const EdgeInsets.only(top: 10, bottom: 10),
+                child: Text('Products', style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w700,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+              ),
+              ..._productResults.map((p) {
+                return GestureDetector(
+                  onTap: () {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (_) => ProductPage(
+                        storeId: p['storeId'],
+                        productId: p['productId'],
+                      ),
+                    );
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            p['imageUrl'] ?? '',
+                            width: 50, height: 50, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 50, height: 50,
+                              color: isDark ? AppColors.surfaceVariantDark : Colors.grey.shade200,
+                              child: Icon(Iconsax.image,
+                                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(p['productName'] ?? '', style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600,
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+                              const SizedBox(height: 2),
+                              Text(p['storeName'] ?? '', style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        Text('\u20b1${p['price']}', style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.primaryLight : AppColors.primary)),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
         );
       },
     );
@@ -376,13 +644,22 @@ class _UserShellState extends State<UserShell> {
   Widget _storeCard({
     required String storeId,
     required String name,
+    required String description,
     required String type,
     required String prepTime,
     required String logoUrl,
     required String bannerUrl,
     required bool isDark,
+    String? openingTime,
+    String? closingTime,
     bool isGridItem = false,
   }) {
+    // Build operating hours string
+    String? hoursText;
+    if (openingTime != null && closingTime != null) {
+      hoursText = '${_formatStoreTime(openingTime)} – ${_formatStoreTime(closingTime)}';
+    }
+
     return Semantics(
       label: '$name, $type, prep time $prepTime',
       hint: 'Double tap to view menu',
@@ -396,10 +673,13 @@ class _UserShellState extends State<UserShell> {
                   (_) => StorePage(
                     storeId: storeId,
                     name: name,
+                    description: description,
                     type: type,
                     prepTime: prepTime,
                     logoUrl: logoUrl,
                     bannerUrl: bannerUrl,
+                    openingTime: openingTime,
+                    closingTime: closingTime,
                   ),
             ),
           );
@@ -475,39 +755,68 @@ class _UserShellState extends State<UserShell> {
                                 : AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      type,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color:
-                            isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(
-                          Iconsax.clock,
-                          size: 14,
-                          color:
-                              isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          prepTime,
-                          style: TextStyle(
-                            fontSize: 12,
+                        if (hoursText != null) ...[
+                          Icon(
+                            Iconsax.clock,
+                            size: 14,
                             color:
                                 isDark
                                     ? AppColors.textTertiaryDark
                                     : AppColors.textTertiary,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              hoursText,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.textTertiary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ] else if (prepTime.isNotEmpty) ...[
+                          Icon(
+                            Iconsax.clock,
+                            size: 14,
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            prepTime,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color:
+                                  isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -646,7 +955,10 @@ class _UserShellState extends State<UserShell> {
   }) {
     bool active = selectedNav == index;
     return GestureDetector(
-      onTap: () => setState(() => selectedNav = index),
+      onTap: () {
+        FocusScope.of(context).unfocus();
+        setState(() => selectedNav = index);
+      },
       child: Container(
         width: 50,
         height: 50,
