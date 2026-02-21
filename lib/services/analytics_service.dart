@@ -1,5 +1,6 @@
 // lib/services/analytics_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 /// Service for generating sales reports and analytics.
 /// Provides daily, weekly, and monthly summaries for merchants.
@@ -8,60 +9,126 @@ class AnalyticsService {
   static final _firestore = FirebaseFirestore.instance;
 
   /// Helper to get orders from both active and archived collections
+  /// Simplified to avoid complex Firestore queries that require indexes
   static Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
   _getAllOrdersWithFilter({
     required String storeId,
-    required String status,
+    List<String>? statuses, // null = all statuses
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    // Query active orders
-    final activeOrders =
-        await _firestore
-            .collection('stores')
-            .doc(storeId)
-            .collection('orders')
-            .where('status', isEqualTo: status)
-            .where(
-              'timestamp',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
-            )
-            .where(
-              'timestamp',
-              isLessThanOrEqualTo: Timestamp.fromDate(endDate),
-            )
-            .get();
+    debugPrint('[Analytics] Fetching orders for storeId: $storeId');
+    debugPrint('[Analytics] Date range: $startDate to $endDate');
+    debugPrint('[Analytics] Status filter: ${statuses?.join(", ") ?? "all"}');
 
-    // Query archived orders
-    final archivedOrders =
-        await _firestore
-            .collection('stores')
-            .doc(storeId)
-            .collection('archivedOrders')
-            .where('status', isEqualTo: status)
-            .where(
-              'timestamp',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
-            )
-            .where(
-              'timestamp',
-              isLessThanOrEqualTo: Timestamp.fromDate(endDate),
-            )
-            .get();
+    final List<QueryDocumentSnapshot<Map<String, dynamic>>> allDocs = [];
 
-    // Combine results
-    return [...activeOrders.docs, ...archivedOrders.docs];
+    try {
+      // Get active orders - simpler query without compound filters
+      final activeOrders =
+          await _firestore
+              .collection('stores')
+              .doc(storeId)
+              .collection('orders')
+              .get();
+
+      debugPrint(
+        '[Analytics] Active orders found: ${activeOrders.docs.length}',
+      );
+
+      // Filter in memory for more reliability
+      for (var doc in activeOrders.docs) {
+        final data = doc.data();
+        final status = data['status']?.toString() ?? '';
+        final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+
+        debugPrint(
+          '[Analytics] Order ${doc.id}: status="$status", timestamp=$timestamp',
+        );
+
+        if (timestamp == null) {
+          debugPrint('[Analytics] - SKIPPED: no timestamp');
+          continue;
+        }
+
+        // Check date range
+        if (timestamp.isBefore(startDate)) {
+          debugPrint('[Analytics] - SKIPPED: before start date ($startDate)');
+          continue;
+        }
+        if (timestamp.isAfter(endDate)) {
+          debugPrint('[Analytics] - SKIPPED: after end date ($endDate)');
+          continue;
+        }
+
+        // Check status if filter provided
+        if (statuses != null &&
+            statuses.isNotEmpty &&
+            !statuses.contains(status)) {
+          debugPrint(
+            '[Analytics] - SKIPPED: status "$status" not in $statuses',
+          );
+          continue;
+        }
+
+        debugPrint('[Analytics] - INCLUDED');
+        allDocs.add(doc);
+      }
+
+      // Get archived orders
+      final archivedOrders =
+          await _firestore
+              .collection('stores')
+              .doc(storeId)
+              .collection('archivedOrders')
+              .get();
+
+      debugPrint(
+        '[Analytics] Archived orders found: ${archivedOrders.docs.length}',
+      );
+
+      // Filter in memory
+      for (var doc in archivedOrders.docs) {
+        final data = doc.data();
+        final status = data['status']?.toString() ?? '';
+        final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+
+        if (timestamp == null) continue;
+
+        // Check date range
+        if (timestamp.isBefore(startDate) || timestamp.isAfter(endDate)) {
+          continue;
+        }
+
+        // Check status if filter provided
+        if (statuses != null &&
+            statuses.isNotEmpty &&
+            !statuses.contains(status)) {
+          continue;
+        }
+
+        allDocs.add(doc);
+      }
+
+      debugPrint('[Analytics] Total filtered orders: ${allDocs.length}');
+    } catch (e) {
+      debugPrint('[Analytics] Error fetching orders: $e');
+    }
+
+    return allDocs;
   }
 
   /// Get sales summary for a specific date range
+  /// Includes all non-cancelled orders (to-do, in-progress, ready, done)
   static Future<SalesSummary> getSalesSummary({
     required String storeId,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
+    // Include all order statuses except cancelled for analytics
     final orderDocs = await _getAllOrdersWithFilter(
       storeId: storeId,
-      status: 'done',
+      statuses: ['to-do', 'in-progress', 'ready', 'done'],
       startDate: startDate,
       endDate: endDate,
     );
@@ -75,15 +142,36 @@ class AnalyticsService {
 
     for (var doc in orderDocs) {
       final data = doc.data();
+      debugPrint('[Analytics] Processing order: ${doc.id}');
+      debugPrint('[Analytics] Order data: $data');
+
       final total = (data['total'] as num?)?.toDouble() ?? 0;
       totalRevenue += total;
+      debugPrint(
+        '[Analytics] Order total: $total, Running revenue: $totalRevenue',
+      );
 
-      // Count items
+      // Count items - support both old and new field names
       final items = data['items'] as List<dynamic>? ?? [];
+      debugPrint('[Analytics] Items in order: ${items.length}');
+
       for (var item in items) {
-        final qty = (item['qty'] as num?)?.toInt() ?? 1;
-        final productName = item['name']?.toString() ?? 'Unknown';
+        debugPrint('[Analytics] Item data: $item');
+        // Support both 'quantity' (new) and 'qty' (old) field names
+        final qty =
+            (item['quantity'] as num?)?.toInt() ??
+            (item['qty'] as num?)?.toInt() ??
+            1;
+        // Support both 'productName' (new) and 'name' (old) field names
+        final productName =
+            item['productName']?.toString() ??
+            item['name']?.toString() ??
+            'Unknown';
         final lineTotal = (item['lineTotal'] as num?)?.toDouble() ?? 0;
+
+        debugPrint(
+          '[Analytics] Item: $productName, qty: $qty, lineTotal: $lineTotal',
+        );
 
         totalItems += qty;
         productCounts[productName] = (productCounts[productName] ?? 0) + qty;
@@ -148,7 +236,10 @@ class AnalyticsService {
       startOfWeek.month,
       startOfWeek.day,
     );
-    final endDate = now;
+    // End of today
+    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+    debugPrint('[Analytics] Week summary: $startDate to $endDate');
 
     return getSalesSummary(
       storeId: storeId,
@@ -161,7 +252,10 @@ class AnalyticsService {
   static Future<SalesSummary> getMonthSummary(String storeId) async {
     final now = DateTime.now();
     final startDate = DateTime(now.year, now.month, 1);
-    final endDate = now;
+    // End of today
+    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+    debugPrint('[Analytics] Month summary: $startDate to $endDate');
 
     return getSalesSummary(
       storeId: storeId,
@@ -186,10 +280,10 @@ class AnalyticsService {
       ).subtract(Duration(days: i));
       final nextDate = date.add(const Duration(days: 1));
 
-      // Query both active and archived orders
+      // Query all non-cancelled orders
       final orderDocs = await _getAllOrdersWithFilter(
         storeId: storeId,
-        status: 'done',
+        statuses: ['to-do', 'in-progress', 'ready', 'done'],
         startDate: date,
         endDate: nextDate,
       );
@@ -296,10 +390,10 @@ class AnalyticsService {
       ).subtract(Duration(days: i));
       final nextDate = date.add(const Duration(days: 1));
 
-      // Query both active and archived orders
+      // Query all non-cancelled orders
       final orderDocs = await _getAllOrdersWithFilter(
         storeId: storeId,
-        status: 'done',
+        statuses: ['to-do', 'in-progress', 'ready', 'done'],
         startDate: date,
         endDate: nextDate,
       );

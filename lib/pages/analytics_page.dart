@@ -36,6 +36,8 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Future<void> _loadStoreId() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('[AnalyticsPage] Current user uid: $uid');
+
     if (uid == null) {
       setState(() {
         storeIdLoaded = true;
@@ -49,18 +51,30 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       final userDoc =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
+      debugPrint('[AnalyticsPage] User doc exists: ${userDoc.exists}');
+
       if (userDoc.exists) {
         final userData = userDoc.data();
+        debugPrint('[AnalyticsPage] User data: $userData');
+
         final loadedStoreId = userData?['storeId']?.toString();
         final name = userData?['name']?.toString() ?? 'Merchant';
+
+        debugPrint('[AnalyticsPage] Loaded storeId: $loadedStoreId');
+        debugPrint('[AnalyticsPage] Loaded name: $name');
+
         setState(() {
           storeId = (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
           merchantName = name;
           storeIdLoaded = true;
         });
+
         if (storeId != null) {
           _loadAnalytics();
         } else {
+          debugPrint(
+            '[AnalyticsPage] storeId is null or empty, showing no store message',
+          );
           setState(() => isLoading = false);
         }
       } else {
@@ -71,6 +85,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         });
       }
     } catch (e) {
+      debugPrint('[AnalyticsPage] Error loading store: $e');
       setState(() {
         storeIdLoaded = true;
         isLoading = false;
@@ -80,8 +95,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Future<void> _loadAnalytics() async {
-    if (storeId == null) return;
+    if (storeId == null) {
+      debugPrint('[AnalyticsPage] storeId is null, skipping load');
+      return;
+    }
 
+    debugPrint('[AnalyticsPage] Loading analytics for storeId: $storeId');
     setState(() => isLoading = true);
 
     try {
@@ -100,22 +119,37 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           data = await AnalyticsService.getWeekSummary(storeId!);
       }
 
+      debugPrint(
+        '[AnalyticsPage] Summary loaded: ${data.totalOrders} orders, ${data.totalRevenue} revenue',
+      );
+
       final customers = await AnalyticsService.getDailyCustomerHistory(
         storeId: storeId!,
         days: 7,
       );
 
+      debugPrint(
+        '[AnalyticsPage] Customer history loaded: ${customers.length} days',
+      );
+
       final prodStats = await AnalyticsService.getProductStats(storeId!);
+
+      debugPrint('[AnalyticsPage] Product stats: $prodStats');
 
       setState(() {
         summary = data;
         customerHistory = customers;
         productStats = prodStats;
         isLoading = false;
+        errorMessage = null;
       });
-    } catch (e) {
-      setState(() => isLoading = false);
-      debugPrint('Error loading analytics: $e');
+    } catch (e, stack) {
+      debugPrint('[AnalyticsPage] Error loading analytics: $e');
+      debugPrint('[AnalyticsPage] Stack trace: $stack');
+      setState(() {
+        isLoading = false;
+        errorMessage = 'Failed to load analytics: $e';
+      });
     }
   }
 
@@ -305,10 +339,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   }
 
   Widget _buildStatsGrid(bool isDark) {
+    final totalRevenue = summary?.totalRevenue ?? 0;
     final totalSales = summary?.totalItems ?? 0;
     final totalOrders = summary?.totalOrders ?? 0;
     final totalProducts = productStats?['totalProducts'] ?? 0;
     final outOfStock = productStats?['outOfStock'] ?? 0;
+
+    debugPrint('[AnalyticsPage] Building stats grid:');
+    debugPrint('[AnalyticsPage] - Revenue: $totalRevenue');
+    debugPrint('[AnalyticsPage] - Sales/Items: $totalSales');
+    debugPrint('[AnalyticsPage] - Orders: $totalOrders');
+    debugPrint('[AnalyticsPage] - Products: $totalProducts');
 
     return Column(
       children: [
@@ -316,9 +357,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           children: [
             Expanded(
               child: _statsCard(
-                title: 'Sales',
-                subtitle: 'Total Sales',
-                value: totalSales.toString(),
+                title: 'Revenue',
+                subtitle: 'Total Revenue',
+                value: '₱${totalRevenue.toStringAsFixed(0)}',
                 isDark: isDark,
               ),
             ),
@@ -338,18 +379,18 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           children: [
             Expanded(
               child: _statsCard(
-                title: 'Total Products',
-                subtitle: null,
-                value: totalProducts.toString(),
+                title: 'Items Sold',
+                subtitle: 'Total items',
+                value: totalSales.toString(),
                 isDark: isDark,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _statsCard(
-                title: 'Out of stock',
-                subtitle: null,
-                value: outOfStock.toString(),
+                title: 'Products',
+                subtitle: 'Total Products',
+                value: totalProducts.toString(),
                 isDark: isDark,
               ),
             ),
