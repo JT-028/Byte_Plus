@@ -1,10 +1,14 @@
 // lib/pages/add_item_page.dart
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_modal_dialog.dart';
+import '../services/cloudinary_service.dart';
 
 class AddItemPage extends StatefulWidget {
   final String storeId;
@@ -27,7 +31,10 @@ class _AddItemPageState extends State<AddItemPage> {
   final _stockController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _basePriceController = TextEditingController();
-  final _imageUrlController = TextEditingController();
+
+  String? _imageUrl; // URL from Cloudinary after upload
+  File? _selectedImageFile; // Local file before upload
+  bool _isUploadingImage = false;
 
   String? _selectedCategory;
   bool _isLoading = false;
@@ -54,7 +61,7 @@ class _AddItemPageState extends State<AddItemPage> {
     _stockController.text = data['stock']?.toString() ?? '';
     _descriptionController.text = data['description']?.toString() ?? '';
     _basePriceController.text = data['price']?.toString() ?? '';
-    _imageUrlController.text = data['imageUrl']?.toString() ?? '';
+    _imageUrl = data['imageUrl']?.toString();
 
     final categoryList = data['category'] as List?;
     if (categoryList != null && categoryList.isNotEmpty) {
@@ -103,7 +110,6 @@ class _AddItemPageState extends State<AddItemPage> {
     _stockController.dispose();
     _descriptionController.dispose();
     _basePriceController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -211,49 +217,10 @@ class _AddItemPageState extends State<AddItemPage> {
       isDark: isDark,
       title: 'Product info',
       children: [
-        // Image URL
-        _labelText('Image URL (Optional)', isDark),
+        // Image Picker
+        _labelText('Product Image (Optional)', isDark),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            if (_imageUrlController.text.isNotEmpty)
-              Container(
-                width: 50,
-                height: 50,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color:
-                      isDark ? AppColors.backgroundDark : Colors.grey.shade100,
-                  border: Border.all(
-                    color: isDark ? AppColors.borderDark : AppColors.border,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    _imageUrlController.text,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) => Icon(
-                          Iconsax.image,
-                          color:
-                              isDark
-                                  ? AppColors.textTertiaryDark
-                                  : AppColors.textTertiary,
-                        ),
-                  ),
-                ),
-              ),
-            Expanded(
-              child: _inputField(
-                _imageUrlController,
-                'Enter image URL',
-                isDark,
-              ),
-            ),
-          ],
-        ),
+        _buildImagePicker(isDark),
         const SizedBox(height: 16),
 
         // Product Name
@@ -737,6 +704,266 @@ class _AddItemPageState extends State<AddItemPage> {
     );
   }
 
+  Widget _buildImagePicker(bool isDark) {
+    final hasImage =
+        _selectedImageFile != null ||
+        (_imageUrl != null && _imageUrl!.isNotEmpty);
+
+    return GestureDetector(
+      onTap: _isUploadingImage ? null : _showImagePickerOptions,
+      child: Container(
+        height: 120,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.backgroundDark : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.border,
+            style: hasImage ? BorderStyle.solid : BorderStyle.none,
+          ),
+        ),
+        child:
+            _isUploadingImage
+                ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text('Uploading...'),
+                    ],
+                  ),
+                )
+                : hasImage
+                ? Stack(
+                  children: [
+                    // Image preview
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child:
+                          _selectedImageFile != null
+                              ? Image.file(
+                                _selectedImageFile!,
+                                width: double.infinity,
+                                height: 120,
+                                fit: BoxFit.cover,
+                              )
+                              : Image.network(
+                                _imageUrl!,
+                                width: double.infinity,
+                                height: 120,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (_, __, ___) =>
+                                        _emptyImagePlaceholder(isDark),
+                              ),
+                    ),
+                    // Remove button
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedImageFile = null;
+                            _imageUrl = null;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Change image overlay
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black45,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Tap to change',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+                : _emptyImagePlaceholder(isDark),
+      ),
+    );
+  }
+
+  Widget _emptyImagePlaceholder(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.border,
+          width: 2,
+          style: BorderStyle.solid,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Iconsax.gallery_add,
+              size: 32,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap to add image',
+              style: TextStyle(
+                fontSize: 14,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImagePickerOptions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Iconsax.camera, color: AppColors.primary),
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Iconsax.gallery,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedImageFile = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
+      }
+    }
+  }
+
+  Future<String?> _uploadImageIfNeeded() async {
+    // If no new image selected, return existing URL
+    if (_selectedImageFile == null) {
+      return _imageUrl;
+    }
+
+    // Upload new image to Cloudinary
+    setState(() => _isUploadingImage = true);
+
+    try {
+      final url = await CloudinaryService.uploadImage(_selectedImageFile!);
+      return url;
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
+      }
+    }
+  }
+
   Widget _labelText(String label, bool isDark) {
     return Text(
       label,
@@ -1188,7 +1415,9 @@ class _AddItemPageState extends State<AddItemPage> {
     setState(() => _isLoading = true);
 
     try {
-      final imageUrl = _imageUrlController.text.trim();
+      // Upload image to Cloudinary if a new one was selected
+      final imageUrl = await _uploadImageIfNeeded();
+
       final basePrice = double.tryParse(basePriceText) ?? 0;
       final stock = int.tryParse(stockText) ?? 0;
 
@@ -1200,7 +1429,7 @@ class _AddItemPageState extends State<AddItemPage> {
                 : basePrice,
         'stock': stock,
         'description': description,
-        'imageUrl': imageUrl,
+        'imageUrl': imageUrl ?? '',
         'category': _selectedCategory != null ? [_selectedCategory] : [],
         'variations': _variations,
         'choiceGroups': _choiceGroups,

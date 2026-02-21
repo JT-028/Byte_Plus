@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_modal_dialog.dart';
 import '../../utils/populate_stores_menu.dart';
+import 'edit_store_page.dart';
 
 class AdminStoresPage extends StatefulWidget {
   const AdminStoresPage({super.key});
@@ -22,11 +23,11 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          _showLoadingOverlay();
-          await Future.delayed(const Duration(milliseconds: 50));
-          if (mounted) Navigator.pop(context); // Dismiss loading
-          _showAddStoreDialog(isDark);
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EditStorePage()),
+          );
         },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
@@ -287,11 +288,17 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                 // Actions
                 IconButton(
                   icon: Icon(Iconsax.edit, size: 18, color: AppColors.primary),
-                  onPressed: () async {
-                    _showLoadingOverlay();
-                    await Future.delayed(const Duration(milliseconds: 50));
-                    if (mounted) Navigator.pop(context); // Dismiss loading
-                    _showEditStoreDialog(doc.id, data, isDark);
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder:
+                            (_) => EditStorePage(
+                              storeId: doc.id,
+                              existingData: data,
+                            ),
+                      ),
+                    );
                   },
                 ),
                 IconButton(
