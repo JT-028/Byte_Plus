@@ -79,6 +79,13 @@ flutter:
   assets:
     - assets/stores/
     - assets/images/
+    - assets/images/Products/
+    - assets/images/Products/Angelina Store/beverage/
+    - assets/images/Products/Angelina Store/biscuit/
+    - assets/images/Products/Angelina Store/BreadPatries/
+    - assets/images/Products/Angelina Store/chips/
+    - assets/images/Products/Potato Corner/New Snacks & Chicken/
+    - assets/images/Products/Potato Corner/Popular Potato Corner Menu Prices/
     - assets/app/
     - assets/animation/
 
