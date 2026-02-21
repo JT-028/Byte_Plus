@@ -8,8 +8,10 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
 import '../services/thermal_printer_service.dart';
+import '../services/order_archival_service.dart';
 import '../widgets/app_modal_dialog.dart';
 import 'printer_settings_page.dart';
+import 'order_reports_page.dart';
 
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
@@ -23,6 +25,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   String? storeName;
   String? storeLogo;
   final ThermalPrinterService _printerService = ThermalPrinterService();
+  bool _archivalChecked = false;
 
   String get merchantUid => FirebaseAuth.instance.currentUser!.uid;
 
@@ -73,6 +76,12 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   }
 
   Widget _loadStoreAndBuildPage(String storeId, bool isDark) {
+    // Trigger daily archival check once per session
+    if (!_archivalChecked) {
+      _archivalChecked = true;
+      OrderArchivalService.checkAndArchiveOrders(storeId);
+    }
+
     return FutureBuilder<DocumentSnapshot>(
       future:
           FirebaseFirestore.instance.collection("stores").doc(storeId).get(),
@@ -138,6 +147,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               ),
             ),
           ),
+          // Reports button
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OrderReportsPage()),
+              );
+            },
+            icon: const Icon(Iconsax.document_text, color: Colors.white),
+            tooltip: 'Order Reports',
+          ),
           // Printer settings button
           StreamBuilder<PrinterStatus>(
             stream: _printerService.statusStream,
@@ -161,7 +181,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               );
             },
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           // Store logo
           Container(
             width: 48,

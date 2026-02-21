@@ -6,6 +6,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lottie/lottie.dart';
+
+import '../theme/app_theme.dart';
 
 class LocationGuard extends StatefulWidget {
   final Widget child;
@@ -223,7 +226,19 @@ class _LocationGuardState extends State<LocationGuard> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: Center(
+          child: Lottie.asset(
+            'assets/animation/cooking_splash.json',
+            width: 200,
+            height: 200,
+            fit: BoxFit.contain,
+            repeat: true,
+          ),
+        ),
+      );
     }
 
     if (_error != null) {

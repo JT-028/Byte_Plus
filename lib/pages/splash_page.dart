@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:lottie/lottie.dart';
 
 import '../theme/app_theme.dart';
 import 'login_page.dart';
@@ -23,38 +24,34 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+  late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
-    _setupAnimations();
+    _setupAnimation();
     _checkAuthState();
   }
 
-  void _setupAnimations() {
-    _animationController = AnimationController(
+  void _setupAnimation() {
+    _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
+    _fadeController.forward();
+  }
 
-    _animationController.forward();
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   /// Save FCM token to user's Firestore document for push notifications
@@ -74,7 +71,7 @@ class _SplashPageState extends State<SplashPage>
 
   Future<void> _checkAuthState() async {
     // Minimum splash duration for better UX
-    await Future.delayed(const Duration(milliseconds: 2000));
+    await Future.delayed(const Duration(milliseconds: 4000));
 
     if (!mounted) return;
 
@@ -169,92 +166,21 @@ class _SplashPageState extends State<SplashPage>
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo with shadow
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.3),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Image.network(
-                        'https://res.cloudinary.com/ddg9ffo5r/image/upload/spcf_mzffy6',
-                        fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stackTrace) => const Icon(
-                              Icons.image,
-                              size: 80,
-                              color: Colors.white,
-                            ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // App Name
-                    Text(
-                      'Byte Plus',
-                      style: AppTextStyles.heading1.copyWith(
-                        color: Colors.white,
-                        fontSize: 32,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xs),
-
-                    // Tagline
-                    Text(
-                      'Smart Canteen System',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpacing.xxl * 2),
-
-                    // Loading indicator
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Lottie.asset(
+            'assets/animation/cooking_splash.json',
+            width: 200,
+            height: 200,
+            fit: BoxFit.contain,
+            repeat: true,
+          ),
         ),
       ),
     );

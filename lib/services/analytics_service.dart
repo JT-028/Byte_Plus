@@ -3,21 +3,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Service for generating sales reports and analytics.
 /// Provides daily, weekly, and monthly summaries for merchants.
+/// Now includes both active orders and archived orders for complete analytics.
 class AnalyticsService {
   static final _firestore = FirebaseFirestore.instance;
 
-  /// Get sales summary for a specific date range
-  static Future<SalesSummary> getSalesSummary({
+  /// Helper to get orders from both active and archived collections
+  static Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+  _getAllOrdersWithFilter({
     required String storeId,
+    required String status,
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    final orders =
+    // Query active orders
+    final activeOrders =
         await _firestore
             .collection('stores')
             .doc(storeId)
             .collection('orders')
-            .where('status', isEqualTo: 'done')
+            .where('status', isEqualTo: status)
             .where(
               'timestamp',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
@@ -28,14 +32,48 @@ class AnalyticsService {
             )
             .get();
 
+    // Query archived orders
+    final archivedOrders =
+        await _firestore
+            .collection('stores')
+            .doc(storeId)
+            .collection('archivedOrders')
+            .where('status', isEqualTo: status)
+            .where(
+              'timestamp',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+            )
+            .where(
+              'timestamp',
+              isLessThanOrEqualTo: Timestamp.fromDate(endDate),
+            )
+            .get();
+
+    // Combine results
+    return [...activeOrders.docs, ...archivedOrders.docs];
+  }
+
+  /// Get sales summary for a specific date range
+  static Future<SalesSummary> getSalesSummary({
+    required String storeId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final orderDocs = await _getAllOrdersWithFilter(
+      storeId: storeId,
+      status: 'done',
+      startDate: startDate,
+      endDate: endDate,
+    );
+
     double totalRevenue = 0;
-    int totalOrders = orders.docs.length;
+    int totalOrders = orderDocs.length;
     int totalItems = 0;
     Map<String, int> productCounts = {};
     Map<String, double> productRevenue = {};
     Map<String, int> hourlyDistribution = {};
 
-    for (var doc in orders.docs) {
+    for (var doc in orderDocs) {
       final data = doc.data();
       final total = (data['total'] as num?)?.toDouble() ?? 0;
       totalRevenue += total;
@@ -148,21 +186,16 @@ class AnalyticsService {
       ).subtract(Duration(days: i));
       final nextDate = date.add(const Duration(days: 1));
 
-      final orders =
-          await _firestore
-              .collection('stores')
-              .doc(storeId)
-              .collection('orders')
-              .where('status', isEqualTo: 'done')
-              .where(
-                'timestamp',
-                isGreaterThanOrEqualTo: Timestamp.fromDate(date),
-              )
-              .where('timestamp', isLessThan: Timestamp.fromDate(nextDate))
-              .get();
+      // Query both active and archived orders
+      final orderDocs = await _getAllOrdersWithFilter(
+        storeId: storeId,
+        status: 'done',
+        startDate: date,
+        endDate: nextDate,
+      );
 
       double revenue = 0;
-      for (var doc in orders.docs) {
+      for (var doc in orderDocs) {
         final total = (doc.data()['total'] as num?)?.toDouble() ?? 0;
         revenue += total;
       }
@@ -171,7 +204,7 @@ class AnalyticsService {
         DailyRevenue(
           date: date,
           revenue: revenue,
-          orderCount: orders.docs.length,
+          orderCount: orderDocs.length,
         ),
       );
     }
@@ -179,15 +212,24 @@ class AnalyticsService {
     return results;
   }
 
-  /// Get order status breakdown
+  /// Get order status breakdown (includes both active and archived orders)
   static Future<Map<String, int>> getOrderStatusBreakdown(
     String storeId,
   ) async {
-    final orders =
+    // Get active orders
+    final activeOrders =
         await _firestore
             .collection('stores')
             .doc(storeId)
             .collection('orders')
+            .get();
+
+    // Get archived orders (only done/cancelled)
+    final archivedOrders =
+        await _firestore
+            .collection('stores')
+            .doc(storeId)
+            .collection('archivedOrders')
             .get();
 
     final counts = <String, int>{
@@ -198,8 +240,15 @@ class AnalyticsService {
       'cancelled': 0,
     };
 
-    for (var doc in orders.docs) {
+    // Count active orders
+    for (var doc in activeOrders.docs) {
       final status = doc.data()['status']?.toString() ?? 'to-do';
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+
+    // Add archived orders (only done/cancelled)
+    for (var doc in archivedOrders.docs) {
+      final status = doc.data()['status']?.toString() ?? 'done';
       counts[status] = (counts[status] ?? 0) + 1;
     }
 

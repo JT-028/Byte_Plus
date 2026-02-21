@@ -50,6 +50,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   image_picker: ^1.2.1
   http: ^1.6.0
+  lottie: ^3.3.2
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +79,7 @@ flutter:
     - assets/stores/
     - assets/images/
     - assets/app/
+    - assets/animation/
 
   fonts:
     - family: Poppins

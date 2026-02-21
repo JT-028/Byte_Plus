@@ -171,23 +171,17 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 40),
 
                 // Logo
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    boxShadow: AppShadows.medium,
-                  ),
-                  padding: const EdgeInsets.all(AppSpacing.sm),
+                SizedBox(
+                  width: 140,
+                  height: 140,
                   child: Image.network(
                     'https://res.cloudinary.com/ddg9ffo5r/image/upload/spcf_mzffy6',
                     fit: BoxFit.contain,
                     errorBuilder:
                         (context, error, stackTrace) => const Icon(
                           Icons.image,
-                          size: 40,
-                          color: Colors.white,
+                          size: 80,
+                          color: AppColors.primary,
                         ),
                   ),
                 ),
