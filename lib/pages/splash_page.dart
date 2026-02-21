@@ -116,12 +116,7 @@ class _SplashPageState extends State<SplashPage>
       }
 
       // Wrap with LocationGuard
-      destination = LocationGuard(
-        useMock: true,
-        mockLat: 15.1161836,
-        mockLng: 120.6343,
-        child: destination,
-      );
+      destination = LocationGuard(useMock: false, child: destination);
 
       // Show location permission page for students
       // (merchants/admins may need different handling)

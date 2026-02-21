@@ -61,13 +61,24 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
   /// Check if permission is already granted and skip if so
   Future<void> _checkExistingPermission() async {
     try {
+      // On web, skip permission_handler check (not supported)
+      if (kIsWeb) {
+        // Check permission using Geolocator instead
+        final permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse) {
+          _proceedToApp();
+        }
+        return;
+      }
+
+      // Mobile platforms: use permission_handler
       final status = await Permission.locationWhenInUse.status;
       if (status.isGranted) {
         _proceedToApp();
       }
     } catch (e) {
-      // On web, permission_handler may not work correctly
-      // We'll proceed to show the permission page anyway
+      // On web or if permission check fails, continue to show permission page
       debugPrint('Permission check failed: $e');
     }
   }

@@ -1,10 +1,23 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   /// Requests permission and ensures location services are enabled
   static Future<bool> ensureLocationEnabled() async {
-    // Ask for permission
+    // On web, use Geolocator's permission handling
+    if (kIsWeb) {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        final result = await Geolocator.requestPermission();
+        return result == LocationPermission.always ||
+            result == LocationPermission.whileInUse;
+      }
+      return permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+    }
+
+    // Mobile platforms: use permission_handler
     var permission = await Permission.location.request();
 
     if (permission.isDenied || permission.isPermanentlyDenied) {

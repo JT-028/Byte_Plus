@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
 import '../widgets/app_modal_dialog.dart';
+import 'login_page.dart';
 
 class MerchantProfilePage extends StatelessWidget {
   const MerchantProfilePage({super.key});
@@ -153,7 +154,11 @@ class MerchantProfilePage extends StatelessWidget {
 
                     if (ok == true) {
                       await FirebaseAuth.instance.signOut();
-                      // main.dart StreamBuilder will automatically route to LoginPage
+                      if (!context.mounted) return;
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                        (route) => false,
+                      );
                     }
                   },
                   child: Text(

@@ -132,6 +132,50 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
               .orderBy('createdAt', descending: true)
               .snapshots(),
       builder: (context, snap) {
+        // Handle errors (e.g., missing Firestore index)
+        if (snap.hasError) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Iconsax.warning_2,
+                  size: 48,
+                  color:
+                      isDark
+                          ? AppColors.textTertiaryDark
+                          : Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error loading requests',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  snap.error.toString(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -177,8 +221,6 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
   Widget _requestCard(DocumentSnapshot doc, bool isDark) {
     final data = doc.data() as Map<String, dynamic>;
     final email = data['email']?.toString() ?? 'Unknown';
-    final userName = data['userName']?.toString() ?? 'Unknown User';
-    final userId = data['userId']?.toString() ?? '';
     final status = data['status']?.toString() ?? 'pending';
     final createdAt = data['createdAt'] as Timestamp?;
     final reason = data['reason']?.toString() ?? '';
@@ -225,7 +267,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      userName,
+                      email,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -237,7 +279,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      email,
+                      dateStr,
                       style: TextStyle(
                         fontSize: 13,
                         color:
@@ -362,7 +404,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _approveRequest(doc.id, email, userId),
+                    onPressed: () => _approveRequest(doc.id, email),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       shape: RoundedRectangleBorder(
@@ -440,11 +482,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
     }
   }
 
-  Future<void> _approveRequest(
-    String requestId,
-    String email,
-    String userId,
-  ) async {
+  Future<void> _approveRequest(String requestId, String email) async {
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Approve Request?',

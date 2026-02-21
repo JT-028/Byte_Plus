@@ -1,5 +1,6 @@
 // lib/pages/admin/admin_users_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
@@ -26,6 +27,13 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreateUserDialog(isDark),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Iconsax.user_add),
+        label: const Text('Add User'),
+      ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,6 +272,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimary,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -276,6 +286,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             : AppColors.textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 if (role == 'staff' && storeId != null) ...[
                   const SizedBox(height: 4),
@@ -339,10 +350,40 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 _changeRole(doc.id, value.substring(5));
               } else if (value == 'assign_store') {
                 _showAssignStoreDialog(doc.id, storeId, isDark);
+              } else if (value == 'edit_user') {
+                _showEditUserDialog(doc.id, name, email, role, isDark);
+              } else if (value == 'delete_user') {
+                _deleteUser(doc.id, name);
               }
             },
             itemBuilder:
                 (_) => [
+                  PopupMenuItem(
+                    value: 'edit_user',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Iconsax.edit,
+                          size: 18,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Edit User',
+                          style: TextStyle(
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
                     enabled: false,
                     child: Text(
@@ -370,6 +411,24 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   const PopupMenuItem(
                     value: 'assign_store',
                     child: Text('Assign to Store'),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    value: 'delete_user',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Iconsax.trash,
+                          size: 18,
+                          color: AppColors.error,
+                        ),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'Delete User',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
           ),
@@ -417,6 +476,186 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           title: 'Role Changed',
           message: 'The user role has been updated.',
         );
+      }
+    }
+  }
+
+  /// Show dialog to create a new user account
+  Future<void> _showCreateUserDialog(bool isDark) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder:
+          (context) => _CreateEditUserSheet(isDark: isDark, isEditing: false),
+    );
+
+    if (result != null && mounted) {
+      try {
+        // Create user with Firebase Auth
+        final email = result['email'] as String;
+        final password = result['password'] as String;
+        final name = result['name'] as String;
+        final role = result['role'] as String;
+
+        // Create auth account
+        final credential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(email: email, password: password);
+
+        // Create Firestore document
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(credential.user!.uid)
+            .set({
+              'name': name,
+              'email': email,
+              'role': role,
+              'createdAt': FieldValue.serverTimestamp(),
+              'createdBy': FirebaseAuth.instance.currentUser?.uid,
+            });
+
+        if (mounted) {
+          await AppModalDialog.success(
+            context: context,
+            title: 'User Created',
+            message: 'The new user account has been created successfully.',
+          );
+        }
+      } on FirebaseAuthException catch (e) {
+        if (mounted) {
+          await AppModalDialog.warning(
+            context: context,
+            title: 'Error',
+            message: e.message ?? 'Failed to create user account.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          await AppModalDialog.warning(
+            context: context,
+            title: 'Error',
+            message: 'Failed to create user: $e',
+          );
+        }
+      }
+    }
+  }
+
+  /// Show dialog to edit user details
+  Future<void> _showEditUserDialog(
+    String userId,
+    String currentName,
+    String currentEmail,
+    String currentRole,
+    bool isDark,
+  ) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder:
+          (context) => _CreateEditUserSheet(
+            isDark: isDark,
+            isEditing: true,
+            initialName: currentName,
+            initialEmail: currentEmail,
+            initialRole: currentRole,
+          ),
+    );
+
+    if (result != null && mounted) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .update({
+              'name': result['name'],
+              'role': result['role'],
+              'updatedAt': FieldValue.serverTimestamp(),
+              'updatedBy': FirebaseAuth.instance.currentUser?.uid,
+            });
+
+        if (mounted) {
+          await AppModalDialog.success(
+            context: context,
+            title: 'User Updated',
+            message: 'The user details have been updated.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          await AppModalDialog.warning(
+            context: context,
+            title: 'Error',
+            message: 'Failed to update user: $e',
+          );
+        }
+      }
+    }
+  }
+
+  /// Delete user account
+  Future<void> _deleteUser(String userId, String userName) async {
+    final ok = await AppModalDialog.confirm(
+      context: context,
+      title: 'Delete User?',
+      message:
+          'Are you sure you want to delete "$userName"? This will remove their profile data. The user will need to re-register to use the app again.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      isDanger: true,
+    );
+
+    if (ok == true) {
+      try {
+        final userRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId);
+
+        // Delete subcollections first, then the parent document
+        final batch = FirebaseFirestore.instance.batch();
+
+        final cartItems = await userRef.collection('cartItems').get();
+        for (final doc in cartItems.docs) {
+          batch.delete(doc.reference);
+        }
+
+        final favorites = await userRef.collection('favorites').get();
+        for (final doc in favorites.docs) {
+          batch.delete(doc.reference);
+        }
+
+        final notifications = await userRef.collection('notifications').get();
+        for (final doc in notifications.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        // Now delete the user document
+        await userRef.delete();
+
+        if (mounted) {
+          await AppModalDialog.success(
+            context: context,
+            title: 'User Deleted',
+            message: 'The user profile has been deleted.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          await AppModalDialog.warning(
+            context: context,
+            title: 'Error',
+            message: 'Failed to delete user: $e',
+          );
+        }
       }
     }
   }
@@ -689,6 +928,407 @@ class _AssignStoreSheetState extends State<_AssignStoreSheet> {
     if (mounted) {
       // Return the result to parent to show success dialog
       Navigator.pop(context, {'success': true, 'storeId': selectedStoreId});
+    }
+  }
+}
+
+/// Bottom sheet for creating or editing a user
+class _CreateEditUserSheet extends StatefulWidget {
+  final bool isDark;
+  final bool isEditing;
+  final String? initialName;
+  final String? initialEmail;
+  final String? initialRole;
+
+  const _CreateEditUserSheet({
+    required this.isDark,
+    required this.isEditing,
+    this.initialName,
+    this.initialEmail,
+    this.initialRole,
+  });
+
+  @override
+  State<_CreateEditUserSheet> createState() => _CreateEditUserSheetState();
+}
+
+class _CreateEditUserSheetState extends State<_CreateEditUserSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  late TextEditingController _passwordController;
+  String _selectedRole = 'student';
+  bool _obscurePassword = true;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName ?? '');
+    _emailController = TextEditingController(text: widget.initialEmail ?? '');
+    _passwordController = TextEditingController();
+    _selectedRole = widget.initialRole ?? 'student';
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.isDark
+                              ? AppColors.borderDark
+                              : AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Text(
+                  widget.isEditing ? 'Edit User' : 'Create New User',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        widget.isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.isEditing
+                      ? 'Update the user\'s information below.'
+                      : 'Enter the details for the new user account.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color:
+                        widget.isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Name field
+                _buildLabel('Full Name'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  style: TextStyle(
+                    color:
+                        widget.isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                  decoration: _inputDecoration('Enter full name', Iconsax.user),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Please enter the name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Email field (only for create)
+                if (!widget.isEditing) ...[
+                  _buildLabel('Email Address'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    style: TextStyle(
+                      color:
+                          widget.isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                    decoration: _inputDecoration('Enter email', Iconsax.sms),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Please enter the email';
+                      }
+                      if (!v.contains('@') || !v.contains('.')) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password field
+                  _buildLabel('Password'),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    style: TextStyle(
+                      color:
+                          widget.isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter password',
+                      hintStyle: TextStyle(
+                        color:
+                            widget.isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
+                      ),
+                      prefixIcon: Icon(
+                        Iconsax.lock,
+                        color:
+                            widget.isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Iconsax.eye : Iconsax.eye_slash,
+                          color:
+                              widget.isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                        onPressed:
+                            () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                      ),
+                      filled: true,
+                      fillColor:
+                          widget.isDark
+                              ? AppColors.backgroundDark
+                              : AppColors.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (v.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Role selector
+                _buildLabel('Role'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _roleChip('student', 'Student'),
+                    const SizedBox(width: 8),
+                    _roleChip('staff', 'Merchant'),
+                    const SizedBox(width: 8),
+                    _roleChip('admin', 'Admin'),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed:
+                            _isLoading ? null : () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(
+                            color:
+                                widget.isDark
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color:
+                                widget.isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _submit,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                                : Text(widget.isEditing ? 'Update' : 'Create'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color:
+            widget.isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondary,
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(
+        color:
+            widget.isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+      ),
+      prefixIcon: Icon(
+        icon,
+        color:
+            widget.isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondary,
+      ),
+      filled: true,
+      fillColor:
+          widget.isDark ? AppColors.backgroundDark : AppColors.background,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  Widget _roleChip(String value, String label) {
+    final isSelected = _selectedRole == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedRole = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color:
+                isSelected
+                    ? AppColors.primary.withOpacity(0.1)
+                    : (widget.isDark
+                        ? AppColors.backgroundDark
+                        : AppColors.background),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color:
+                  isSelected
+                      ? AppColors.primary
+                      : (widget.isDark
+                          ? AppColors.borderDark
+                          : Colors.grey.shade300),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color:
+                  isSelected
+                      ? AppColors.primary
+                      : (widget.isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      Navigator.pop(context, {
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+        'role': _selectedRole,
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 }

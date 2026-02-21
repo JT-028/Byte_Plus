@@ -48,27 +48,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       final email = _emailController.text.trim();
 
-      // Look up the user by email
-      final userQuery =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: email)
-              .limit(1)
-              .get();
-
-      String? userId;
-      String? userName;
-
-      if (userQuery.docs.isNotEmpty) {
-        userId = userQuery.docs.first.id;
-        userName = userQuery.docs.first.data()['name']?.toString();
-      }
-
       // Submit password request for admin approval
+      // Note: User lookup is done by admin when processing the request
       await FirebaseFirestore.instance.collection('passwordRequests').add({
         'email': email,
-        'userId': userId,
-        'userName': userName ?? 'Unknown',
         'reason': _reasonController.text.trim(),
         'status': 'pending',
         'createdAt': FieldValue.serverTimestamp(),
@@ -83,6 +66,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
+      debugPrint('Password request error: $e');
       _showError('Something went wrong. Please try again.');
     }
   }

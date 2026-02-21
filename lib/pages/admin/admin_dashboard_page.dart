@@ -383,7 +383,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       final i = entry.key;
                       final data = entry.value.data() as Map<String, dynamic>;
                       final email = data['email'] ?? 'Unknown';
-                      final name = data['userName'] ?? 'Unknown User';
+                      final reason = data['reason'] ?? '';
 
                       return Container(
                         padding: const EdgeInsets.all(14),
@@ -423,7 +423,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    name,
+                                    email,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -433,16 +433,17 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                               : AppColors.textPrimary,
                                     ),
                                   ),
-                                  Text(
-                                    email,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color:
-                                          isDark
-                                              ? AppColors.textSecondaryDark
-                                              : AppColors.textSecondary,
+                                  if (reason.isNotEmpty)
+                                    Text(
+                                      reason,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
