@@ -485,7 +485,16 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               _showLoadingOverlay();
               await Future.delayed(const Duration(milliseconds: 50));
               if (mounted) Navigator.pop(context); // Dismiss loading
-              _handleAccept(storeId, orderId, userId);
+              _handleAccept(
+                storeId: storeId,
+                orderId: orderId,
+                userId: userId,
+                pickupNumber: pickupNumber,
+                items: items,
+                total: total,
+                note: note,
+                pickupTime: pickupNow ? 'Now' : formattedTime,
+              );
             },
             onReject: () async {
               _showLoadingOverlay();
@@ -967,37 +976,156 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   }
 
   // Action handlers
-  Future<void> _handleAccept(
-    String storeId,
-    String orderId,
-    String userId,
-  ) async {
+  Future<void> _handleAccept({
+    required String storeId,
+    required String orderId,
+    required String userId,
+    required String pickupNumber,
+    required List<dynamic> items,
+    required double total,
+    required String note,
+    String? pickupTime,
+  }) async {
+    // Check if printer is connected before allowing order acceptance
+    if (_printerService.status != PrinterStatus.connected) {
+      final goToSettings = await AppModalDialog.confirm(
+        context: context,
+        title: 'Printer Not Connected',
+        message:
+            'Please connect to a thermal printer before accepting orders. The receipt will be printed automatically upon acceptance.',
+        confirmLabel: 'Connect Printer',
+        cancelLabel: 'Cancel',
+      );
+
+      if (goToSettings == true && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PrinterSettingsPage()),
+        );
+      }
+      return;
+    }
+
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Accept Order?',
-      message: 'This will move the order to Preparing.',
+      message:
+          'This will accept the order and print the receipt automatically.',
       confirmLabel: 'Accept',
       cancelLabel: 'Cancel',
     );
 
     if (ok == true) {
-      await _updateOrderStatusEverywhere(
-        storeId: storeId,
-        orderId: orderId,
-        userId: userId,
-        newStatus: "in-progress",
-        extra: {
-          "acceptedAt": FieldValue.serverTimestamp(),
-          "acceptedBy": merchantUid,
-        },
+      // Show printing dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _buildPrintingDialog(),
       );
 
-      if (!mounted) return;
-      await AppModalDialog.success(
-        context: context,
-        title: 'Order Accepted',
-        message: 'The order is now being prepared.',
-      );
+      try {
+        // Accept the order first
+        await _updateOrderStatusEverywhere(
+          storeId: storeId,
+          orderId: orderId,
+          userId: userId,
+          newStatus: "in-progress",
+          extra: {
+            "acceptedAt": FieldValue.serverTimestamp(),
+            "acceptedBy": merchantUid,
+          },
+        );
+
+        // Build and print receipt
+        final receiptItems =
+            items.map((item) {
+              final itemData = item as Map<String, dynamic>;
+              final name = itemData['name']?.toString() ?? 'Item';
+              final qty = (itemData['qty'] as num?)?.toInt() ?? 1;
+              final price = (itemData['price'] as num?)?.toDouble() ?? 0;
+
+              String? variations;
+              if (itemData['selectedVariation'] != null) {
+                final v = itemData['selectedVariation'] as Map<String, dynamic>;
+                variations = v['name']?.toString();
+              }
+
+              String? choiceGroups;
+              if (itemData['selectedChoices'] is List) {
+                final choices = itemData['selectedChoices'] as List;
+                final choiceNames =
+                    choices
+                        .map((c) {
+                          if (c is Map<String, dynamic>) {
+                            return c['name']?.toString() ?? '';
+                          }
+                          return '';
+                        })
+                        .where((s) => s.isNotEmpty)
+                        .toList();
+                if (choiceNames.isNotEmpty) {
+                  choiceGroups = choiceNames.join(', ');
+                }
+              }
+
+              return ReceiptItem(
+                name: name,
+                quantity: qty,
+                price: price * qty,
+                variations: variations,
+                choiceGroups: choiceGroups,
+              );
+            }).toList();
+
+        final subtotal = receiptItems.fold<double>(
+          0.0,
+          (sum, item) => sum + item.price,
+        );
+
+        final receipt = ReceiptData(
+          storeName: storeName ?? 'BytePlus Store',
+          orderNumber: pickupNumber,
+          dateTime: DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.now()),
+          pickupTime: pickupTime,
+          items: receiptItems,
+          subtotal: subtotal,
+          total: total,
+          note: note.isNotEmpty ? note : null,
+        );
+
+        final printSuccess = await _printerService.printReceipt(receipt);
+
+        // Close printing dialog
+        if (mounted) Navigator.pop(context);
+
+        if (!mounted) return;
+
+        if (printSuccess) {
+          await AppModalDialog.success(
+            context: context,
+            title: 'Order Accepted',
+            message: 'Order accepted and receipt printed successfully!',
+          );
+        } else {
+          // Order was accepted but print failed
+          await AppModalDialog.info(
+            context: context,
+            title: 'Order Accepted',
+            message:
+                'Order accepted but receipt failed to print. You can try printing manually.',
+          );
+        }
+      } catch (e) {
+        // Close printing dialog
+        if (mounted) Navigator.pop(context);
+
+        if (!mounted) return;
+        await AppModalDialog.error(
+          context: context,
+          title: 'Error',
+          message: 'An error occurred: $e',
+        );
+      }
     }
   }
 
@@ -1006,35 +1134,244 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     String orderId,
     String userId,
   ) async {
-    final ok = await AppModalDialog.confirm(
-      context: context,
-      title: 'Reject Order?',
-      message: 'This will cancel the order.',
-      confirmLabel: 'Reject',
-      cancelLabel: 'Cancel',
-      isDanger: true,
+    // Show rejection reason dialog
+    final reason = await _showRejectReasonDialog();
+
+    if (reason == null) return; // User cancelled
+
+    await _updateOrderStatusEverywhere(
+      storeId: storeId,
+      orderId: orderId,
+      userId: userId,
+      newStatus: "cancelled",
+      extra: {
+        "cancelledAt": FieldValue.serverTimestamp(),
+        "cancelledBy": merchantUid,
+        "cancelledByRole": "staff",
+        "cancelReason": reason,
+      },
+      cancelReason: reason,
     );
 
-    if (ok == true) {
-      await _updateOrderStatusEverywhere(
-        storeId: storeId,
-        orderId: orderId,
-        userId: userId,
-        newStatus: "cancelled",
-        extra: {
-          "cancelledAt": FieldValue.serverTimestamp(),
-          "cancelledBy": merchantUid,
-          "cancelledByRole": "staff",
-        },
-      );
+    if (!mounted) return;
+    await AppModalDialog.info(
+      context: context,
+      title: 'Order Rejected',
+      message:
+          'The order has been cancelled and the customer has been notified.',
+    );
+  }
 
-      if (!mounted) return;
-      await AppModalDialog.info(
-        context: context,
-        title: 'Order Rejected',
-        message: 'The order has been cancelled.',
-      );
-    }
+  Future<String?> _showRejectReasonDialog() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reasonController = TextEditingController();
+    String selectedReason = '';
+
+    final commonReasons = [
+      'Item out of stock',
+      'Store is closing soon',
+      'Unable to fulfill order',
+      'Payment issue',
+      'Other (specify below)',
+    ];
+
+    return await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.cancel_outlined,
+                      color: AppColors.error,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Reject Order',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select a reason:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ...commonReasons.map((reason) {
+                      final isSelected = selectedReason == reason;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              selectedReason = reason;
+                              if (reason != 'Other (specify below)') {
+                                reasonController.clear();
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? AppColors.error.withOpacity(0.1)
+                                      : isDark
+                                      ? AppColors.backgroundDark
+                                      : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color:
+                                    isSelected
+                                        ? AppColors.error
+                                        : Colors.transparent,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_off,
+                                  color:
+                                      isSelected
+                                          ? AppColors.error
+                                          : AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    reason,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color:
+                                          isDark
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    if (selectedReason == 'Other (specify below)') ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: reasonController,
+                        maxLines: 2,
+                        decoration: InputDecoration(
+                          hintText: 'Enter custom reason...',
+                          hintStyle: TextStyle(
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiary,
+                          ),
+                          filled: true,
+                          fillColor:
+                              isDark
+                                  ? AppColors.backgroundDark
+                                  : Colors.grey.shade100,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                        style: TextStyle(
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      selectedReason.isEmpty
+                          ? null
+                          : () {
+                            final finalReason =
+                                selectedReason == 'Other (specify below)'
+                                    ? (reasonController.text.trim().isEmpty
+                                        ? 'Other'
+                                        : reasonController.text.trim())
+                                    : selectedReason;
+                            Navigator.pop(context, finalReason);
+                          },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text('Reject Order'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleMarkReady(
@@ -1106,6 +1443,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     required String userId,
     required String newStatus,
     Map<String, dynamic>? extra,
+    String? cancelReason,
   }) async {
     if (userId.isEmpty) {
       throw Exception("Missing userId on order. Cannot update everywhere.");
@@ -1153,6 +1491,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         status: newStatus,
         storeName: storeName ?? 'Your store',
         pickupNumber: null,
+        cancelReason: cancelReason,
       );
     } catch (e) {
       debugPrint("⚠️ Failed to send notification: $e");

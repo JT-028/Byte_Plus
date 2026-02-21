@@ -104,9 +104,15 @@ class NotificationService {
     required String status,
     required String storeName,
     String? pickupNumber,
+    String? cancelReason,
   }) async {
     final title = _getNotificationTitle(status);
-    final body = _getNotificationBody(status, storeName, pickupNumber);
+    final body = _getNotificationBody(
+      status,
+      storeName,
+      pickupNumber,
+      cancelReason,
+    );
 
     // Store notification request for Cloud Function to process
     await _firestore.collection('notifications').add({
@@ -155,8 +161,9 @@ class NotificationService {
   static String _getNotificationBody(
     String status,
     String storeName,
-    String? pickupNumber,
-  ) {
+    String? pickupNumber, [
+    String? cancelReason,
+  ]) {
     switch (status) {
       case 'in-progress':
         return 'Your order at $storeName is now being prepared.';
@@ -166,7 +173,11 @@ class NotificationService {
       case 'done':
         return 'Thank you for ordering at $storeName!';
       case 'cancelled':
-        return 'Your order at $storeName has been cancelled.';
+        final reason =
+            cancelReason != null && cancelReason.isNotEmpty
+                ? ' Reason: $cancelReason'
+                : '';
+        return 'Your order at $storeName has been cancelled.$reason';
       default:
         return 'Your order status has been updated.';
     }
