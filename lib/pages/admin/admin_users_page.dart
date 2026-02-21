@@ -526,6 +526,15 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
 
     if (result != null && mounted) {
+      // Prompt admin for their password first, before any account creation
+      final adminPassword = await _promptForAdminPassword(isDark);
+      if (adminPassword == null) {
+        return; // User cancelled
+      }
+
+      // Show full-screen loading overlay to block all StreamBuilders during auth switch
+      _showLoadingOverlay(isDark, 'Creating user account...');
+
       try {
         final email = result['email'] as String;
         final password = result['password'] as String;
@@ -535,15 +544,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         // Save admin credentials to re-authenticate after user creation
         final adminUser = FirebaseAuth.instance.currentUser;
         final adminEmail = adminUser?.email;
+        final adminUid = adminUser?.uid;
 
         if (adminEmail == null) {
           throw Exception('Admin email not found');
-        }
-
-        // Prompt admin for their password to re-authenticate after
-        final adminPassword = await _promptForAdminPassword(isDark);
-        if (adminPassword == null) {
-          return; // User cancelled
         }
 
         // Create auth account (this will sign in as the new user)
@@ -559,17 +563,20 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               'email': email,
               'role': role,
               'createdAt': FieldValue.serverTimestamp(),
-              'createdBy': adminUser?.uid,
+              'createdBy': adminUid,
             });
 
-        // Sign out the newly created user
+        // Sign out the newly created user immediately
         await FirebaseAuth.instance.signOut();
 
-        // Re-authenticate as admin
+        // Re-authenticate as admin as fast as possible
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: adminEmail,
           password: adminPassword,
         );
+
+        // Dismiss loading overlay
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
 
         if (mounted) {
           await AppModalDialog.success(
@@ -579,6 +586,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } on FirebaseAuthException catch (e) {
+        // Dismiss loading overlay
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
         // Try to re-sign in admin if something went wrong
         await _tryReauthenticateAdmin();
 
@@ -590,6 +600,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } catch (e) {
+        // Dismiss loading overlay
+        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+
         // Try to re-sign in admin if something went wrong
         await _tryReauthenticateAdmin();
 
@@ -602,6 +615,51 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         }
       }
     }
+  }
+
+  /// Show a full-screen loading overlay
+  void _showLoadingOverlay(bool isDark, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder:
+          (context) => PopScope(
+            canPop: false,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+    );
   }
 
   /// Prompt admin for their password
