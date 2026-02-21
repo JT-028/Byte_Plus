@@ -23,7 +23,8 @@ class UserShell extends StatefulWidget {
   State<UserShell> createState() => _UserShellState();
 }
 
-class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixin {
+class _UserShellState extends State<UserShell>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -86,17 +87,19 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
   Future<void> _searchProducts(String query) async {
     setState(() => _isSearchingProducts = true);
     try {
-      final storesSnap = await FirebaseFirestore.instance.collection('stores').get();
+      final storesSnap =
+          await FirebaseFirestore.instance.collection('stores').get();
       final results = <Map<String, dynamic>>[];
       final lowerQuery = query.toLowerCase();
 
       for (final storeDoc in storesSnap.docs) {
         final storeData = storeDoc.data();
-        final menuSnap = await FirebaseFirestore.instance
-            .collection('stores')
-            .doc(storeDoc.id)
-            .collection('menu')
-            .get();
+        final menuSnap =
+            await FirebaseFirestore.instance
+                .collection('stores')
+                .doc(storeDoc.id)
+                .collection('menu')
+                .get();
 
         for (final menuDoc in menuSnap.docs) {
           final menuData = menuDoc.data();
@@ -281,19 +284,22 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
                 ),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.close,
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondary,
-                        ),
-                        onPressed: () {
-                          _searchController.clear();
-                          _onSearchChanged('');
-                        },
-                      )
-                    : null,
+                suffixIcon:
+                    _searchQuery.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(
+                            Icons.close,
+                            color:
+                                isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                        )
+                        : null,
                 hintText: "Search stores or food...",
                 hintStyle: TextStyle(
                   color:
@@ -504,11 +510,12 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
         final lowerQuery = _searchQuery.toLowerCase();
 
         // Filter stores by name
-        final matchedStores = snap.data!.docs.where((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          final name = (data['name'] ?? '').toString().toLowerCase();
-          return name.contains(lowerQuery);
-        }).toList();
+        final matchedStores =
+            snap.data!.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = (data['name'] ?? '').toString().toLowerCase();
+              return name.contains(lowerQuery);
+            }).toList();
 
         final hasStores = matchedStores.isNotEmpty;
         final hasProducts = _productResults.isNotEmpty;
@@ -518,12 +525,25 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Iconsax.search_normal, size: 64,
-                  color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                Icon(
+                  Iconsax.search_normal,
+                  size: 64,
+                  color:
+                      isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary,
+                ),
                 const SizedBox(height: 16),
-                Text('No results for "$_searchQuery"',
-                  style: TextStyle(fontSize: 16,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+                Text(
+                  'No results for "$_searchQuery"',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           );
@@ -535,9 +555,17 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
             if (hasStores) ...[
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: Text('Stores', style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+                child: Text(
+                  'Stores',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ),
               ...matchedStores.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
@@ -558,15 +586,26 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
             if (_isSearchingProducts)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Center(child: CircularProgressIndicator(
-                  color: isDark ? AppColors.primaryLight : AppColors.primary)),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: isDark ? AppColors.primaryLight : AppColors.primary,
+                  ),
+                ),
               ),
             if (hasProducts) ...[
               Padding(
                 padding: const EdgeInsets.only(top: 10, bottom: 10),
-                child: Text('Products', style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+                child: Text(
+                  'Products',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ),
               ..._productResults.map((p) {
                 return GestureDetector(
@@ -575,10 +614,11 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
                       context: context,
                       backgroundColor: Colors.transparent,
                       isScrollControlled: true,
-                      builder: (_) => ProductPage(
-                        storeId: p['storeId'],
-                        productId: p['productId'],
-                      ),
+                      builder:
+                          (_) => ProductPage(
+                            storeId: p['storeId'],
+                            productId: p['productId'],
+                          ),
                     );
                   },
                   child: Container(
@@ -601,13 +641,25 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
                           borderRadius: BorderRadius.circular(10),
                           child: Image.network(
                             p['imageUrl'] ?? '',
-                            width: 50, height: 50, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 50, height: 50,
-                              color: isDark ? AppColors.surfaceVariantDark : Colors.grey.shade200,
-                              child: Icon(Iconsax.image,
-                                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
-                            ),
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  width: 50,
+                                  height: 50,
+                                  color:
+                                      isDark
+                                          ? AppColors.surfaceVariantDark
+                                          : Colors.grey.shade200,
+                                  child: Icon(
+                                    Iconsax.image,
+                                    color:
+                                        isDark
+                                            ? AppColors.textTertiaryDark
+                                            : AppColors.textTertiary,
+                                  ),
+                                ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -615,19 +667,42 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(p['productName'] ?? '', style: TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.w600,
-                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)),
+                              Text(
+                                p['productName'] ?? '',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary,
+                                ),
+                              ),
                               const SizedBox(height: 2),
-                              Text(p['storeName'] ?? '', style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary)),
+                              Text(
+                                p['storeName'] ?? '',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color:
+                                      isDark
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondary,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        Text('\u20b1${p['price']}', style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700,
-                          color: isDark ? AppColors.primaryLight : AppColors.primary)),
+                        Text(
+                          '\u20b1${p['price']}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color:
+                                isDark
+                                    ? AppColors.primaryLight
+                                    : AppColors.primary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -657,7 +732,8 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
     // Build operating hours string
     String? hoursText;
     if (openingTime != null && closingTime != null) {
-      hoursText = '${_formatStoreTime(openingTime)} – ${_formatStoreTime(closingTime)}';
+      hoursText =
+          '${_formatStoreTime(openingTime)} – ${_formatStoreTime(closingTime)}';
     }
 
     return Semantics(
@@ -665,8 +741,8 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
       hint: 'Double tap to view menu',
       button: true,
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder:
@@ -683,6 +759,10 @@ class _UserShellState extends State<UserShell> with AutomaticKeepAliveClientMixi
                   ),
             ),
           );
+          // Handle go to cart signal from store page
+          if (result == 'goToCart' && mounted) {
+            setState(() => selectedNav = 1);
+          }
         },
         child: Container(
           margin:

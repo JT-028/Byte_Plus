@@ -98,6 +98,35 @@ class _SplashPageState extends State<SplashPage>
       }
 
       final data = userDoc.data() ?? {};
+
+      // Check if account has been deleted by admin
+      final status = (data['status'] ?? '').toString().toLowerCase();
+      if (status == 'deleted') {
+        // Sign out the user and show message
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        // Show error dialog then navigate to login
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Account Disabled'),
+                content: const Text(
+                  'Your account has been disabled by an administrator. Please contact support if you believe this is an error.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+        if (mounted) _navigateToLogin();
+        return;
+      }
+
       final role = (data['role'] ?? 'student').toString().trim().toLowerCase();
 
       // Save FCM token for push notifications

@@ -240,7 +240,7 @@ class _ProductPageState extends State<ProductPage> {
     bool merged = false;
 
     for (var doc in match.docs) {
-      final data = doc.data() as Map<String, dynamic>;
+      final data = doc.data();
       final existingChoices = List<Map<String, dynamic>>.from(
         data["selectedChoices"] ?? [],
       );

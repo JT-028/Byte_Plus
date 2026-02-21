@@ -154,8 +154,9 @@ class _CartPageState extends State<CartPage> {
                                         variationName.isNotEmpty
                                             ? variationName
                                             : sizeName;
-                                    if (displayName.isEmpty)
+                                    if (displayName.isEmpty) {
                                       return const SizedBox.shrink();
+                                    }
                                     return Text(
                                       displayName,
                                       style: TextStyle(
@@ -174,14 +175,16 @@ class _CartPageState extends State<CartPage> {
                                         List<Map<String, dynamic>>.from(
                                           data['selectedChoices'] ?? [],
                                         );
-                                    if (selectedChoices.isEmpty)
+                                    if (selectedChoices.isEmpty) {
                                       return const SizedBox.shrink();
+                                    }
                                     final names = selectedChoices
                                         .map((c) => c['name']?.toString() ?? '')
                                         .where((n) => n.isNotEmpty)
                                         .join(', ');
-                                    if (names.isEmpty)
+                                    if (names.isEmpty) {
                                       return const SizedBox.shrink();
+                                    }
                                     return Text(
                                       names,
                                       style: TextStyle(

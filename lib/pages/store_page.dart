@@ -45,11 +45,27 @@ class _StorePageState extends State<StorePage> {
 
   final ScrollController scrollController = ScrollController();
   final Map<String, GlobalKey> sectionKeys = {};
+  bool _showScrollToTop = false;
 
   @override
   void initState() {
     super.initState();
     loadCategories();
+    scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    scrollController.removeListener(_onScroll);
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    final show = scrollController.offset > 300;
+    if (show != _showScrollToTop) {
+      setState(() => _showScrollToTop = show);
+    }
   }
 
   Future<void> loadCategories() async {
@@ -84,11 +100,25 @@ class _StorePageState extends State<StorePage> {
     final ctx = key.currentContext;
     if (ctx == null) return;
 
-    Scrollable.ensureVisible(
-      ctx,
+    // Find the render object and calculate position relative to scroll view
+    final renderBox = ctx.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final scrollableState = Scrollable.of(ctx);
+    final scrollPosition = scrollableState.position;
+    final viewport = RenderAbstractViewport.of(renderBox);
+    final targetOffset = viewport.getOffsetToReveal(renderBox, 0.0).offset;
+
+    // Subtract sticky header height (60) + a small padding
+    final adjustedOffset = (targetOffset - 68).clamp(
+      0.0,
+      scrollPosition.maxScrollExtent,
+    );
+
+    scrollController.animateTo(
+      adjustedOffset,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      alignment: 0,
     );
   }
 
@@ -127,6 +157,49 @@ class _StorePageState extends State<StorePage> {
               right: 0,
               bottom: 0,
               child: _storeCartBar(isDark),
+            ),
+
+            // Floating scroll-to-top button
+            Positioned(
+              right: 16,
+              bottom: 100,
+              child: AnimatedOpacity(
+                opacity: _showScrollToTop ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 250),
+                child: IgnorePointer(
+                  ignoring: !_showScrollToTop,
+                  child: GestureDetector(
+                    onTap: () {
+                      scrollController.animateTo(
+                        0,
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color:
+                            isDark ? AppColors.primaryLight : AppColors.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.keyboard_arrow_up_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -243,7 +316,8 @@ class _StorePageState extends State<StorePage> {
     // Format operating hours
     String? hoursText;
     if (widget.openingTime != null && widget.closingTime != null) {
-      hoursText = '${_formatTime(widget.openingTime!)} – ${_formatTime(widget.closingTime!)}';
+      hoursText =
+          '${_formatTime(widget.openingTime!)} – ${_formatTime(widget.closingTime!)}';
     }
 
     return Container(
@@ -843,7 +917,14 @@ class _StorePageState extends State<StorePage> {
                 context: context,
                 backgroundColor: Colors.transparent,
                 isScrollControlled: true,
-                builder: (_) => CartStoreSheet(storeId: widget.storeId),
+                builder:
+                    (_) => CartStoreSheet(
+                      storeId: widget.storeId,
+                      onGoToCheckout: () {
+                        // Pop store page and return 'goToCart' signal
+                        Navigator.pop(context, 'goToCart');
+                      },
+                    ),
               );
             },
             child: Row(

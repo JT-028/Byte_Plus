@@ -57,7 +57,6 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
               ),
             ),
           ),
-
         ],
       ),
     );
@@ -732,24 +731,59 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
       context: context,
       title: 'Delete Store?',
       message:
-          'This will permanently delete "$storeName" and all associated data.',
+          'This will permanently delete "$storeName" and all menu items, categories, and orders. This cannot be undone.',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       isDanger: true,
     );
 
     if (ok == true) {
-      await FirebaseFirestore.instance
-          .collection('stores')
-          .doc(storeId)
-          .delete();
+      try {
+        final storeRef = FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeId);
 
-      if (mounted) {
-        await AppModalDialog.success(
-          context: context,
-          title: 'Store Deleted',
-          message: 'The store has been deleted.',
-        );
+        // Delete all subcollections first
+        final batch = FirebaseFirestore.instance.batch();
+
+        // Delete menu items
+        final menuItems = await storeRef.collection('menu').get();
+        for (final doc in menuItems.docs) {
+          batch.delete(doc.reference);
+        }
+
+        // Delete categories
+        final categories = await storeRef.collection('categories').get();
+        for (final doc in categories.docs) {
+          batch.delete(doc.reference);
+        }
+
+        // Delete orders
+        final orders = await storeRef.collection('orders').get();
+        for (final doc in orders.docs) {
+          batch.delete(doc.reference);
+        }
+
+        await batch.commit();
+
+        // Now delete the store document
+        await storeRef.delete();
+
+        if (mounted) {
+          await AppModalDialog.success(
+            context: context,
+            title: 'Store Deleted',
+            message: 'The store and all related data have been deleted.',
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          await AppModalDialog.error(
+            context: context,
+            title: 'Error',
+            message: 'Failed to delete store: $e',
+          );
+        }
       }
     }
   }
@@ -852,5 +886,4 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
       ],
     );
   }
-
 }

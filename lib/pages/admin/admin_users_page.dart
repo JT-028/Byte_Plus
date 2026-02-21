@@ -172,6 +172,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
         var docs = snap.data!.docs;
 
+        // Filter out deleted users
+        docs =
+            docs.where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              final status = (data['status'] ?? '').toString().toLowerCase();
+              return status != 'deleted';
+            }).toList();
+
         // Filter by role
         if (selectedRoleFilter != 'All') {
           docs =
@@ -630,7 +638,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       context: context,
       title: 'Delete User?',
       message:
-          'Are you sure you want to delete "$userName"? This will remove their profile data. The user will need to re-register to use the app again.',
+          'Are you sure you want to delete "$userName"? This will disable their account and remove their data. This action cannot be undone.',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       isDanger: true,
@@ -642,7 +650,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             .collection('users')
             .doc(userId);
 
-        // Delete subcollections first, then the parent document
+        // Delete subcollections first
         final batch = FirebaseFirestore.instance.batch();
 
         final cartItems = await userRef.collection('cartItems').get();
@@ -662,14 +670,20 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
         await batch.commit();
 
-        // Now delete the user document
-        await userRef.delete();
+        // Mark the user document as deleted instead of deleting it
+        // This prevents them from logging in and allows blocking re-registration
+        await userRef.update({
+          'status': 'deleted',
+          'deletedAt': FieldValue.serverTimestamp(),
+          'deletedBy': FirebaseAuth.instance.currentUser?.uid,
+        });
 
         if (mounted) {
           await AppModalDialog.success(
             context: context,
             title: 'User Deleted',
-            message: 'The user profile has been deleted.',
+            message:
+                'The user account has been disabled and their data removed.',
           );
         }
       } catch (e) {

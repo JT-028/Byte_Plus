@@ -8,8 +8,9 @@ import '../theme/app_theme.dart';
 
 class CartStoreSheet extends StatefulWidget {
   final String storeId;
+  final VoidCallback? onGoToCheckout;
 
-  const CartStoreSheet({super.key, required this.storeId});
+  const CartStoreSheet({super.key, required this.storeId, this.onGoToCheckout});
 
   @override
   State<CartStoreSheet> createState() => _CartStoreSheetState();
@@ -318,9 +319,8 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
       child: GestureDetector(
         onTap: () {
           Navigator.pop(context); // Close store cart
-          Navigator.pop(context); // Close store page
-          // Then go to main cart tab
-          Navigator.pushNamed(context, "/cart_tab");
+          // Signal to go to checkout via callback
+          widget.onGoToCheckout?.call();
         },
         child: Container(
           height: 48,
