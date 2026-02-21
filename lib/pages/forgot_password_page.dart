@@ -1,13 +1,14 @@
 // lib/pages/forgot_password_page.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/widgets.dart';
 import '../widgets/app_modal_dialog.dart';
 
-/// Forgot Password page - sends password reset email via Firebase
+/// Forgot Password page - submits request for admin approval
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -18,12 +19,14 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _reasonController = TextEditingController();
   bool _loading = false;
-  bool _emailSent = false;
+  bool _requestSent = false;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _reasonController.dispose();
     super.dispose();
   }
 
@@ -37,41 +40,50 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return null;
   }
 
-  Future<void> _sendResetEmail() async {
+  Future<void> _submitPasswordRequest() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
 
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _emailController.text.trim(),
-      );
+      final email = _emailController.text.trim();
+
+      // Look up the user by email
+      final userQuery =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .limit(1)
+              .get();
+
+      String? userId;
+      String? userName;
+
+      if (userQuery.docs.isNotEmpty) {
+        userId = userQuery.docs.first.id;
+        userName = userQuery.docs.first.data()['name']?.toString();
+      }
+
+      // Submit password request for admin approval
+      await FirebaseFirestore.instance.collection('passwordRequests').add({
+        'email': email,
+        'userId': userId,
+        'userName': userName ?? 'Unknown',
+        'reason': _reasonController.text.trim(),
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
       if (!mounted) return;
 
       setState(() {
-        _emailSent = true;
+        _requestSent = true;
         _loading = false;
       });
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-      _showError(_getFirebaseErrorMessage(e.code));
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
       _showError('Something went wrong. Please try again.');
-    }
-  }
-
-  String _getFirebaseErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No account found with this email.';
-      case 'invalid-email':
-        return 'Invalid email address.';
-      default:
-        return 'Failed to send reset email. Please try again.';
     }
   }
 
@@ -100,7 +112,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child:
-              _emailSent ? _buildSuccessView(isDark) : _buildFormView(isDark),
+              _requestSent ? _buildSuccessView(isDark) : _buildFormView(isDark),
         ),
       ),
     );
@@ -143,7 +155,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           const SizedBox(height: AppSpacing.sm),
 
           Text(
-            "No worries! Enter your school email and we'll send you a link to reset your password.",
+            "Enter your school email and reason for reset. An admin will review your request and send you a reset link.",
             style: AppTextStyles.bodyMedium.copyWith(
               color:
                   isDark
@@ -165,17 +177,33 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
             ),
             keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
+            textInputAction: TextInputAction.next,
             validator: _validateEmail,
-            onSubmitted: (_) => _sendResetEmail(),
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          // Reason Field
+          AppTextField(
+            controller: _reasonController,
+            label: 'Reason (optional)',
+            hint: 'e.g., Forgot my password, Account recovery...',
+            prefixIcon: Icon(
+              Iconsax.message_text,
+              color:
+                  isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+            ),
+            maxLines: 2,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submitPasswordRequest(),
           ),
 
           const SizedBox(height: AppSpacing.xl),
 
           // Send Button
           AppButton(
-            label: 'Send Reset Link',
-            onPressed: _sendResetEmail,
+            label: 'Submit Request',
+            onPressed: _submitPasswordRequest,
             isLoading: _loading,
             isFullWidth: true,
           ),
@@ -236,7 +264,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
         // Title
         Text(
-          'Email Sent!',
+          'Request Submitted!',
           style: AppTextStyles.heading1.copyWith(
             color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
           ),
@@ -245,7 +273,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         const SizedBox(height: AppSpacing.sm),
 
         Text(
-          'We sent a password reset link to',
+          'Your password reset request has been submitted for',
           style: AppTextStyles.bodyMedium.copyWith(
             color:
                 isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
@@ -276,11 +304,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           child: Column(
             children: [
-              _buildInstructionItem(isDark, '1', 'Check your email inbox'),
+              _buildInstructionItem(
+                isDark,
+                '1',
+                'Admin will review your request',
+              ),
               const SizedBox(height: AppSpacing.sm),
-              _buildInstructionItem(isDark, '2', 'Click the reset link'),
+              _buildInstructionItem(
+                isDark,
+                '2',
+                'Once approved, check your email',
+              ),
               const SizedBox(height: AppSpacing.sm),
-              _buildInstructionItem(isDark, '3', 'Create a new password'),
+              _buildInstructionItem(
+                isDark,
+                '3',
+                'Click the reset link to create new password',
+              ),
             ],
           ),
         ),
@@ -296,13 +336,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
         const SizedBox(height: AppSpacing.md),
 
-        // Didn't receive email
+        // Submit another request
         GestureDetector(
           onTap: () {
-            setState(() => _emailSent = false);
+            setState(() => _requestSent = false);
+            _emailController.clear();
+            _reasonController.clear();
           },
           child: Text(
-            "Didn't receive the email? Try again",
+            'Submit another request',
             style: AppTextStyles.labelMedium.copyWith(
               color: isDark ? AppColors.primaryLight : AppColors.primary,
             ),

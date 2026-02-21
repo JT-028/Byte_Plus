@@ -2,10 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../pages/login_page.dart';
-import '../pages/manage_menu_page.dart';
+import '../pages/admin/admin_dashboard_page.dart';
+import '../pages/admin/admin_users_page.dart';
+import '../pages/admin/admin_stores_page.dart';
+import '../pages/admin/admin_password_requests_page.dart';
+import '../widgets/app_modal_dialog.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -15,9 +20,16 @@ class AdminShell extends StatefulWidget {
 }
 
 class _AdminShellState extends State<AdminShell> {
-  int _selected = 0; // 0 = Orders, 1 = Manage Menu
+  int _selectedIndex = 0;
   final _auth = FirebaseAuth.instance;
   User get _user => _auth.currentUser!;
+
+  final List<Widget> _pages = const [
+    AdminDashboardPage(),
+    AdminUsersPage(),
+    AdminStoresPage(),
+    AdminPasswordRequestsPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -25,124 +37,357 @@ class _AdminShellState extends State<AdminShell> {
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
-      appBar: AppBar(
-        title: Text(
-          'Byte Plus Admin',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.textPrimaryDark : Colors.white,
-          ),
-        ),
-        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.primary,
-        leading: Builder(
-          builder:
-              (context) => IconButton(
-                icon: Icon(
-                  Icons.menu,
-                  color: isDark ? AppColors.textPrimaryDark : Colors.white,
-                ),
-                onPressed: () => Scaffold.of(context).openDrawer(),
-              ),
-        ),
+      appBar: _buildAppBar(isDark),
+      drawer: _buildDrawer(isDark),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
       ),
-      drawer: _buildDrawer(context, isDark),
-      body:
-          _selected == 0
-              ? _buildOrdersDashboard(isDark)
-              : const ManageMenuPage(),
+      bottomNavigationBar: _buildBottomNav(isDark),
     );
   }
 
-  Drawer _buildDrawer(BuildContext context, bool isDark) {
+  AppBar _buildAppBar(bool isDark) {
+    return AppBar(
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.primary,
+      elevation: 0,
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Iconsax.shield_tick,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'BytePlus Admin',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+              color: isDark ? AppColors.textPrimaryDark : Colors.white,
+            ),
+          ),
+        ],
+      ),
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: Icon(
+            Iconsax.menu_1,
+            color: isDark ? AppColors.textPrimaryDark : Colors.white,
+          ),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
+      actions: [
+        // Pending requests badge
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('passwordRequests')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
+          builder: (context, snap) {
+            final count = snap.data?.docs.length ?? 0;
+            return Stack(
+              children: [
+                IconButton(
+                  icon: Icon(
+                    Iconsax.notification,
+                    color: isDark ? AppColors.textPrimaryDark : Colors.white,
+                  ),
+                  onPressed: () => setState(() => _selectedIndex = 3),
+                ),
+                if (count > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        count > 9 ? '9+' : count.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Drawer _buildDrawer(bool isDark) {
     return Drawer(
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       child: SafeArea(
         child: Column(
           children: [
+            // Profile header
             FutureBuilder<DocumentSnapshot>(
-              future:
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(_user.uid)
-                      .get(),
+              future: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(_user.uid)
+                  .get(),
               builder: (context, snap) {
                 final data = snap.data?.data() as Map<String, dynamic>? ?? {};
-                return UserAccountsDrawerHeader(
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.primaryDark : AppColors.primary,
                   ),
-                  accountName: Text(
-                    data['name'] ?? 'Admin',
-                    style: const TextStyle(color: Colors.white),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Iconsax.shield_tick,
+                            color: AppColors.primary,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        data['name']?.toString() ?? 'Admin',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        data['email']?.toString() ?? _user.email ?? '',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'Administrator',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  accountEmail: Text(
-                    data['email'] ?? _user.email ?? '',
-                    style: TextStyle(color: Colors.white.withOpacity(0.8)),
-                  ),
-                  currentAccountPicture: CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.admin_panel_settings,
-                      color: AppColors.primary,
-                      size: 36,
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // Nav items
+            _drawerItem(
+              icon: Iconsax.home_2,
+              label: 'Dashboard',
+              index: 0,
+              isDark: isDark,
+            ),
+            _drawerItem(
+              icon: Iconsax.people,
+              label: 'Manage Users',
+              index: 1,
+              isDark: isDark,
+            ),
+            _drawerItem(
+              icon: Iconsax.shop,
+              label: 'Manage Stores',
+              index: 2,
+              isDark: isDark,
+            ),
+            _drawerItem(
+              icon: Iconsax.key,
+              label: 'Password Requests',
+              index: 3,
+              isDark: isDark,
+              showBadge: true,
+            ),
+
+            const Spacer(),
+
+            // Logout
+            Divider(color: isDark ? AppColors.borderDark : AppColors.border),
+            ListTile(
+              leading: const Icon(Iconsax.logout, color: AppColors.error),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+              ),
+              onTap: _logout,
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerItem({
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isDark,
+    bool showBadge = false,
+  }) {
+    final isSelected = _selectedIndex == index;
+
+    return ListTile(
+      leading: Stack(
+        children: [
+          Icon(
+            icon,
+            color: isSelected
+                ? AppColors.primary
+                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
+          ),
+          if (showBadge)
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('passwordRequests')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(),
+              builder: (context, snap) {
+                final count = snap.data?.docs.length ?? 0;
+                if (count == 0) return const SizedBox.shrink();
+                return Positioned(
+                  right: -4,
+                  top: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      count > 9 ? '9+' : count.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 );
               },
             ),
-            ListTile(
-              leading: Icon(
-                Icons.receipt_long,
-                color:
-                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-              ),
-              title: Text(
-                'Orders',
-                style: TextStyle(
-                  color:
-                      isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                ),
-              ),
-              onTap: () {
-                setState(() => _selected = 0);
-                Navigator.pop(context);
-              },
+        ],
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+        ),
+      ),
+      onTap: () {
+        setState(() => _selectedIndex = index);
+        Navigator.pop(context);
+      },
+      tileColor: isSelected
+          ? AppColors.primary.withOpacity(0.1)
+          : Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav(bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(Iconsax.home_2, 'Dashboard', 0, isDark),
+              _navItem(Iconsax.people, 'Users', 1, isDark),
+              _navItem(Iconsax.shop, 'Stores', 2, isDark),
+              _navItemWithBadge(Iconsax.key, 'Requests', 3, isDark),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, int index, bool isDark) {
+    final isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? AppColors.primary
+                  : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+              size: 22,
             ),
-            ListTile(
-              leading: Icon(
-                Icons.fastfood,
-                color:
-                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
               ),
-              title: Text(
-                'Manage Menu',
-                style: TextStyle(
-                  color:
-                      isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                ),
-              ),
-              onTap: () {
-                setState(() => _selected = 1);
-                Navigator.pop(context);
-              },
-            ),
-            const Spacer(),
-            Divider(color: isDark ? AppColors.borderDark : AppColors.border),
-            ListTile(
-              leading: Icon(Icons.logout, color: AppColors.error),
-              title: Text('Logout', style: TextStyle(color: AppColors.error)),
-              onTap: () async {
-                await _auth.signOut();
-                if (!mounted) return;
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                );
-              },
             ),
           ],
         ),
@@ -150,218 +395,94 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 
-  Widget _buildOrdersDashboard(bool isDark) {
-    return DefaultTabController(
-      length: 4,
-      child: Column(
-        children: [
-          TabBar(
-            indicatorColor: AppColors.primary,
-            labelColor: AppColors.primary,
-            unselectedLabelColor:
-                isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-            tabs: const [
-              Tab(text: 'To-Do'),
-              Tab(text: 'In Progress'),
-              Tab(text: 'Done'),
-              Tab(text: 'Cancelled'),
-            ],
-          ),
-          Expanded(
-            child: TabBarView(
+  Widget _navItemWithBadge(IconData icon, String label, int index, bool isDark) {
+    final isSelected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                _buildOrdersList('to-do', isDark),
-                _buildOrdersList('in-progress', isDark),
-                _buildOrdersList('done', isDark),
-                _buildOrdersList('cancelled', isDark),
+                Icon(
+                  icon,
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                  size: 22,
+                ),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('passwordRequests')
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
+                  builder: (context, snap) {
+                    final count = snap.data?.docs.length ?? 0;
+                    if (count == 0) return const SizedBox.shrink();
+                    return Positioned(
+                      right: -6,
+                      top: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          count > 9 ? '9+' : count.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.primary
+                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildOrdersList(String status, bool isDark) {
-    return StreamBuilder<QuerySnapshot>(
-      stream:
-          FirebaseFirestore.instance
-              .collection('orders')
-              .where('status', isEqualTo: status)
-              .orderBy('timestamp', descending: true)
-              .snapshots(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
-          );
-        }
-        final docs = snap.data!.docs;
-        if (docs.isEmpty) {
-          return Center(
-            child: Text(
-              'No $status orders.',
-              style: TextStyle(
-                color:
-                    isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
-              ),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: docs.length,
-          itemBuilder: (_, i) {
-            final data = docs[i].data() as Map<String, dynamic>;
-            final userName = data['userName'] ?? 'Unknown';
-            final userEmail = data['userEmail'] ?? '';
-            final items = (data['items'] as List?) ?? [];
-            final total = (data['total'] as num?)?.toDouble() ?? 0;
-
-            return Card(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Order #${docs[i].id.substring(0, 6)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Customer: $userName',
-                      style: TextStyle(
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Email: $userEmail',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color:
-                            isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
-                      ),
-                    ),
-                    Divider(
-                      color: isDark ? AppColors.borderDark : AppColors.border,
-                    ),
-                    ...items.map(
-                      (e) => Text(
-                        '${e['name']} (₱${e['price']} × ${e['qty']})',
-                        style: TextStyle(
-                          color:
-                              isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Total: ₱${total.toStringAsFixed(2)}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Chip(
-                            label: Text(
-                              status.toUpperCase(),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                            backgroundColor: _statusColor(status),
-                          ),
-                          if (status == 'to-do') ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.info,
-                              ),
-                              onPressed:
-                                  () => _updateOrderStatus(
-                                    docs[i].id,
-                                    'in-progress',
-                                  ),
-                              child: const Text(
-                                'Start',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ] else if (status == 'in-progress') ...[
-                            const SizedBox(width: 8),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                              ),
-                              onPressed:
-                                  () => _updateOrderStatus(docs[i].id, 'done'),
-                              child: const Text(
-                                'Done',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+  Future<void> _logout() async {
+    final ok = await AppModalDialog.confirm(
+      context: context,
+      title: 'Logout?',
+      message: 'Are you sure you want to logout?',
+      confirmLabel: 'Logout',
+      cancelLabel: 'Cancel',
     );
-  }
 
-  Future<void> _updateOrderStatus(String id, String newStatus) async {
-    await FirebaseFirestore.instance.collection('orders').doc(id).update({
-      'status': newStatus,
-    });
-  }
-
-  Color _statusColor(String s) {
-    switch (s) {
-      case 'to-do':
-        return AppColors.statusTodo;
-      case 'in-progress':
-        return AppColors.statusPreparing;
-      case 'done':
-        return AppColors.statusDone;
-      case 'cancelled':
-        return AppColors.statusCancelled;
-      default:
-        return AppColors.textTertiary;
+    if (ok == true) {
+      await _auth.signOut();
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
     }
   }
 }
