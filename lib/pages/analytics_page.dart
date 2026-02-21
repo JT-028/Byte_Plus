@@ -17,14 +17,16 @@ class AnalyticsPage extends StatefulWidget {
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
   String? storeId;
-  int selectedPeriod = 0; // 0: Today, 1: Week, 2: Month
+  String? merchantName;
+  int selectedPeriod = 1; // 0: Today, 1: This Week, 2: This Month
   SalesSummary? summary;
-  List<DailyRevenue>? revenueHistory;
+  List<DailyRevenue>? customerHistory;
+  Map<String, int>? productStats;
   bool isLoading = true;
   bool storeIdLoaded = false;
   String? errorMessage;
 
-  final periodLabels = ['Today', 'This Week', 'This Month'];
+  final periodLabels = ['Today', 'This week', 'This month'];
 
   @override
   void initState() {
@@ -48,9 +50,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
-        final loadedStoreId = userDoc.data()?['storeId']?.toString();
+        final userData = userDoc.data();
+        final loadedStoreId = userData?['storeId']?.toString();
+        final name = userData?['name']?.toString() ?? 'Merchant';
         setState(() {
           storeId = (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
+          merchantName = name;
           storeIdLoaded = true;
         });
         if (storeId != null) {
@@ -92,17 +97,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           data = await AnalyticsService.getMonthSummary(storeId!);
           break;
         default:
-          data = await AnalyticsService.getTodaySummary(storeId!);
+          data = await AnalyticsService.getWeekSummary(storeId!);
       }
 
-      final history = await AnalyticsService.getDailyRevenueHistory(
+      final customers = await AnalyticsService.getDailyCustomerHistory(
         storeId: storeId!,
         days: 7,
       );
 
+      final prodStats = await AnalyticsService.getProductStats(storeId!);
+
       setState(() {
         summary = data;
-        revenueHistory = history;
+        customerHistory = customers;
+        productStats = prodStats;
         isLoading = false;
       });
     } catch (e) {
@@ -125,28 +133,34 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 ? _buildNoStoreMessage(isDark)
                 : RefreshIndicator(
                   onRefresh: _loadAnalytics,
-                  child: CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(child: _buildHeader(isDark)),
-                      SliverToBoxAdapter(child: _buildPeriodSelector(isDark)),
-                      SliverToBoxAdapter(child: const SizedBox(height: 20)),
-                      if (isLoading)
-                        const SliverFillRemaining(
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else ...[
-                        SliverToBoxAdapter(child: _buildSummaryCards(isDark)),
-                        SliverToBoxAdapter(child: const SizedBox(height: 24)),
-                        SliverToBoxAdapter(child: _buildRevenueChart(isDark)),
-                        SliverToBoxAdapter(child: const SizedBox(height: 24)),
-                        SliverToBoxAdapter(child: _buildTopProducts(isDark)),
-                        SliverToBoxAdapter(child: const SizedBox(height: 24)),
-                        SliverToBoxAdapter(
-                          child: _buildHourlyDistribution(isDark),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildGreeting(isDark),
+                        const SizedBox(height: 24),
+                        _buildStoreReportsHeader(isDark),
+                        const SizedBox(height: 16),
+                        if (isLoading)
+                          const SizedBox(
+                            height: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        else ...[
+                          _buildStatsGrid(isDark),
+                          const SizedBox(height: 24),
+                          _buildTopSellingProducts(isDark),
+                          const SizedBox(height: 24),
+                          _buildCustomersChart(isDark),
+                          const SizedBox(height: 100),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
       ),
@@ -195,272 +209,203 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildHeader(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Insights',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color:
-                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+  Widget _buildGreeting(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
+            children: [
+              const TextSpan(text: 'Hello '),
+              TextSpan(
+                text: '$merchantName,',
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-            ),
+            ],
           ),
-          IconButton(
-            onPressed: _loadAnalytics,
-            icon: Icon(
-              Iconsax.refresh,
-              color:
-                  isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondary,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "Here's how your shop's doing",
+          style: TextStyle(
+            fontSize: 14,
+            color:
+                isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildPeriodSelector(bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: List.generate(3, (i) {
-          final selected = selectedPeriod == i;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() => selectedPeriod = i);
-                _loadAnalytics();
-              },
-              child: Container(
-                margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color:
-                      selected
-                          ? AppColors.merchantPrimary
-                          : (isDark ? AppColors.surfaceDark : Colors.white),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow:
-                      selected
-                          ? [
-                            BoxShadow(
-                              color: AppColors.merchantPrimary.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                          : null,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  periodLabels[i],
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        selected
-                            ? Colors.white
-                            : (isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary),
+  Widget _buildStoreReportsHeader(bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Store Reports',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.border,
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: selectedPeriod,
+              isDense: true,
+              icon: Icon(
+                Icons.keyboard_arrow_down,
+                size: 20,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+              items: List.generate(
+                periodLabels.length,
+                (i) => DropdownMenuItem(
+                  value: i,
+                  child: Text(
+                    periodLabels[i],
+                    style: TextStyle(
+                      fontSize: 14,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),
+              onChanged: (val) {
+                if (val != null) {
+                  setState(() => selectedPeriod = val);
+                  _loadAnalytics();
+                }
+              },
             ),
-          );
-        }),
-      ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSummaryCards(bool isDark) {
-    if (summary == null) return const SizedBox();
+  Widget _buildStatsGrid(bool isDark) {
+    final totalSales = summary?.totalItems ?? 0;
+    final totalOrders = summary?.totalOrders ?? 0;
+    final totalProducts = productStats?['totalProducts'] ?? 0;
+    final outOfStock = productStats?['outOfStock'] ?? 0;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _summaryCard(
-              title: 'Revenue',
-              value: '₱${summary!.totalRevenue.toStringAsFixed(0)}',
-              icon: Iconsax.wallet_2,
-              color: AppColors.success,
-              isDark: isDark,
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _statsCard(
+                title: 'Sales',
+                subtitle: 'Total Sales',
+                value: totalSales.toString(),
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _summaryCard(
-              title: 'Orders',
-              value: summary!.totalOrders.toString(),
-              icon: Iconsax.receipt_2,
-              color: AppColors.merchantPrimary,
-              isDark: isDark,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _statsCard(
+                title: 'Orders',
+                subtitle: 'Total orders',
+                value: totalOrders.toString(),
+                isDark: isDark,
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _summaryCard(
-              title: 'Avg Order',
-              value: '₱${summary!.averageOrderValue.toStringAsFixed(0)}',
-              icon: Iconsax.chart,
-              color: AppColors.warning,
-              isDark: isDark,
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _statsCard(
+                title: 'Total Products',
+                subtitle: null,
+                value: totalProducts.toString(),
+                isDark: isDark,
+              ),
             ),
-          ),
-        ],
-      ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _statsCard(
+                title: 'Out of stock',
+                subtitle: null,
+                value: outOfStock.toString(),
+                isDark: isDark,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _summaryCard({
+  Widget _statsCard({
     required String title,
+    String? subtitle,
     required String value,
-    required IconData icon,
-    required Color color,
     required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
-              color:
-                  isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRevenueChart(bool isDark) {
-    if (revenueHistory == null || revenueHistory!.isEmpty) {
-      return const SizedBox();
-    }
-
-    final maxRevenue = revenueHistory!
-        .map((e) => e.revenue)
-        .reduce((a, b) => a > b ? a : b);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Revenue (Last 7 Days)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 150,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children:
-                  revenueHistory!.map((day) {
-                    final height =
-                        maxRevenue > 0 ? (day.revenue / maxRevenue * 120) : 0.0;
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (day.revenue > 0)
-                              Text(
-                                '₱${day.revenue.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  color:
-                                      isDark
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.textSecondary,
-                                ),
-                              ),
-                            const SizedBox(height: 4),
-                            Container(
-                              height: height.toDouble().clamp(4.0, 120.0),
-                              decoration: BoxDecoration(
-                                color: AppColors.merchantPrimary,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              DateFormat('E').format(day.date),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color:
-                                    isDark
-                                        ? AppColors.textTertiaryDark
-                                        : AppColors.textTertiary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+          if (subtitle != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                color:
+                    isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiary,
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
           ),
         ],
@@ -468,194 +413,347 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildTopProducts(bool isDark) {
-    if (summary == null || summary!.topProducts.isEmpty) {
-      return _emptySection('No sales data yet', isDark);
-    }
+  Widget _buildTopSellingProducts(bool isDark) {
+    final products = summary?.topProducts ?? [];
+    final maxQty =
+        products.isNotEmpty
+            ? products.map((e) => e.quantity).reduce((a, b) => a > b ? a : b)
+            : 1;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Top Products',
+            'Top Selling Products',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
-          ...summary!.topProducts.take(5).map((product) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.merchantPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Iconsax.box_1,
-                      color: AppColors.merchantPrimary,
-                      size: 20,
-                    ),
+          // Table header
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'Name',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  'Popularity',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 50,
+                child: Text(
+                  'Sales',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (products.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'No sales data yet',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...products.take(5).map((product) {
+              final percentage =
+                  maxQty > 0 ? ((product.quantity / maxQty) * 100).round() : 0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        product.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: _popularityBar(percentage, isDark),
+                    ),
+                    SizedBox(
+                      width: 50,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                isDark
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
+                        ),
+                        child: Text(
+                          '$percentage%',
+                          textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                             color:
                                 isDark
                                     ? AppColors.textPrimaryDark
                                     : AppColors.textPrimary,
                           ),
                         ),
-                        Text(
-                          '${product.quantity} sold',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '₱${product.revenue.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.success,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
+                  ],
+                ),
+              );
+            }),
         ],
       ),
     );
   }
 
-  Widget _buildHourlyDistribution(bool isDark) {
-    if (summary == null || summary!.hourlyDistribution.isEmpty) {
+  Widget _popularityBar(int percentage, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(right: 12),
+      height: 8,
+      decoration: BoxDecoration(
+        color:
+            isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: percentage / 100,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.merchantPrimary,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomersChart(bool isDark) {
+    if (customerHistory == null || customerHistory!.isEmpty) {
       return const SizedBox();
     }
 
-    final sortedHours =
-        summary!.hourlyDistribution.entries.toList()
-          ..sort((a, b) => int.parse(a.key).compareTo(int.parse(b.key)));
+    final maxCustomers = customerHistory!
+        .map((e) => e.revenue.toInt())
+        .reduce((a, b) => a > b ? a : b);
+    final chartMax = maxCustomers > 0 ? maxCustomers : 100;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Orders by Hour',
+            'Customers',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                sortedHours.map((entry) {
-                  final hour = int.parse(entry.key);
-                  final count = entry.value;
-                  final timeLabel =
-                      hour == 0
-                          ? '12 AM'
-                          : hour < 12
-                          ? '$hour AM'
-                          : hour == 12
-                          ? '12 PM'
-                          : '${hour - 12} PM';
-
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.merchantPrimary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$timeLabel: $count',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.merchantPrimary,
+          // Y-axis labels and chart
+          SizedBox(
+            height: 180,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Y-axis labels
+                SizedBox(
+                  width: 30,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        chartMax.toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                      Text(
+                        (chartMax * 0.75).round().toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        (chartMax * 0.5).round().toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        (chartMax * 0.25).round().toString(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
+                      Text(
+                        '0',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color:
+                              isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Bars
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children:
+                        customerHistory!.map((day) {
+                          final customers = day.revenue.toInt();
+                          final barHeight =
+                              chartMax > 0
+                                  ? (customers / chartMax * 140).clamp(
+                                    4.0,
+                                    140.0,
+                                  )
+                                  : 4.0;
+                          final isToday =
+                              DateFormat('E').format(day.date) ==
+                              DateFormat('E').format(DateTime.now());
+
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: barHeight,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isToday
+                                              ? AppColors.merchantPrimary
+                                              : (isDark
+                                                  ? AppColors.borderDark
+                                                  : AppColors.border
+                                                      .withOpacity(0.5)),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    DateFormat(
+                                      'E',
+                                    ).format(day.date).substring(0, 3),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color:
+                                          isDark
+                                              ? AppColors.textTertiaryDark
+                                              : AppColors.textTertiary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _emptySection(String message, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(
-            color:
-                isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
-          ),
-        ),
       ),
     );
   }

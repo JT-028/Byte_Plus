@@ -254,6 +254,76 @@ class AnalyticsService {
 
     return counts;
   }
+
+  /// Get total products and out of stock count for a store
+  static Future<Map<String, int>> getProductStats(String storeId) async {
+    final products =
+        await _firestore
+            .collection('stores')
+            .doc(storeId)
+            .collection('menu')
+            .get();
+
+    int totalProducts = products.docs.length;
+    int outOfStock = 0;
+
+    for (var doc in products.docs) {
+      final data = doc.data();
+      final available = data['available'] ?? true;
+      final stock = (data['stock'] as num?)?.toInt() ?? -1;
+
+      if (!available || stock == 0) {
+        outOfStock++;
+      }
+    }
+
+    return {'totalProducts': totalProducts, 'outOfStock': outOfStock};
+  }
+
+  /// Get daily customer/order count for the past 7 days (for chart)
+  static Future<List<DailyRevenue>> getDailyCustomerHistory({
+    required String storeId,
+    int days = 7,
+  }) async {
+    final now = DateTime.now();
+    final results = <DailyRevenue>[];
+
+    for (int i = days - 1; i >= 0; i--) {
+      final date = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: i));
+      final nextDate = date.add(const Duration(days: 1));
+
+      // Query both active and archived orders
+      final orderDocs = await _getAllOrdersWithFilter(
+        storeId: storeId,
+        status: 'done',
+        startDate: date,
+        endDate: nextDate,
+      );
+
+      // Count unique customers
+      final Set<String> uniqueCustomers = {};
+      for (var doc in orderDocs) {
+        final customerId = doc.data()['userId']?.toString() ?? '';
+        if (customerId.isNotEmpty) {
+          uniqueCustomers.add(customerId);
+        }
+      }
+
+      results.add(
+        DailyRevenue(
+          date: date,
+          revenue: uniqueCustomers.length.toDouble(),
+          orderCount: orderDocs.length,
+        ),
+      );
+    }
+
+    return results;
+  }
 }
 
 /// Sales summary data model

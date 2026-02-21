@@ -79,7 +79,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     // Trigger daily archival check once per session
     if (!_archivalChecked) {
       _archivalChecked = true;
-      OrderArchivalService.checkAndArchiveOrders(storeId);
+      OrderArchivalService().checkAndArchiveOrders(storeId);
     }
 
     return FutureBuilder<DocumentSnapshot>(
