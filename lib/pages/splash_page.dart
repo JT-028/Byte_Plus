@@ -71,7 +71,7 @@ class _SplashPageState extends State<SplashPage>
 
   Future<void> _checkAuthState() async {
     // Minimum splash duration for better UX
-    await Future.delayed(const Duration(milliseconds: 4000));
+    await Future.delayed(const Duration(milliseconds: 3000));
 
     if (!mounted) return;
 

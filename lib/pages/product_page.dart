@@ -1,5 +1,6 @@
 // lib/pages/product_page.dart
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -22,33 +23,38 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  DocumentSnapshot? doc;
+  // Product data - loaded once
+  Map<String, dynamic>? _productData;
+  bool _isLoading = true;
 
-  // Size price now represents FULL PRICE (100 / 110)
-  int selectedSizePrice = 0;
-  String? selectedSize;
+  // Selected variation (e.g., Small, Large)
+  int? _selectedVariationIndex;
+  double _selectedVariationPrice = 0;
 
-  // Required fields
-  String? selectedSugar;
-  String? selectedIce;
+  // Selected choices per group: groupIndex -> Set of choice indices
+  final Map<int, Set<int>> _selectedChoices = {};
 
-  // Optional
-  final Set<Map<String, dynamic>> selectedToppings = {};
-  int toppingsTotal = 0;
+  // Total add-on price from choice groups
+  double _choicesTotal = 0;
 
-  int quantity = 1;
-  int basePrice = 0; // Regular full price
-  bool collapsed = false;
+  int _quantity = 1;
+  bool _collapsed = false;
 
-  final TextEditingController noteCtrl = TextEditingController();
+  final TextEditingController _noteCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    loadProduct();
+    _loadProduct();
   }
 
-  Future<void> loadProduct() async {
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProduct() async {
     final snap =
         await FirebaseFirestore.instance
             .collection("stores")
@@ -57,49 +63,134 @@ class _ProductPageState extends State<ProductPage> {
             .doc(widget.productId)
             .get();
 
-    if (snap.exists) {
+    if (snap.exists && mounted) {
+      final data = snap.data() as Map<String, dynamic>;
+
+      // Initialize choice groups selection
+      final choiceGroups = data['choiceGroups'] as List? ?? [];
+      for (int i = 0; i < choiceGroups.length; i++) {
+        _selectedChoices[i] = {};
+      }
+
       setState(() {
-        doc = snap;
-        basePrice = int.parse(snap["price"].toString());
+        _productData = data;
+        _isLoading = false;
       });
+    } else if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
 
-  // ------------------------------------------------------------
-  // REQUIRED LOGIC
-  // ------------------------------------------------------------
-  bool isCompleted(String section) {
-    switch (section) {
-      case "size":
-        return selectedSize != null;
-      case "sugar":
-        return selectedSugar != null;
-      case "ice":
-        return selectedIce != null;
-      default:
-        return false;
+  // Get base price (when no variations)
+  double get _basePrice {
+    if (_productData == null) return 0;
+    return ((_productData!['price'] as num?) ?? 0).toDouble();
+  }
+
+  // Get the applied price (variation price or base price)
+  double get _appliedPrice {
+    if (_selectedVariationPrice > 0) return _selectedVariationPrice;
+    return _basePrice;
+  }
+
+  // Calculate total price
+  double get _totalPrice {
+    return (_appliedPrice + _choicesTotal) * _quantity;
+  }
+
+  // Check if all required choice groups are completed
+  bool _isChoiceGroupComplete(int groupIndex) {
+    final groups = _productData?['choiceGroups'] as List? ?? [];
+    if (groupIndex >= groups.length) return true;
+
+    final group = groups[groupIndex] as Map<String, dynamic>;
+    final isRequired = group['isRequired'] ?? false;
+    final maxSelections = (group['maxSelections'] as num?)?.toInt() ?? 1;
+
+    if (!isRequired) return true;
+
+    final selected = _selectedChoices[groupIndex]?.length ?? 0;
+    return selected >= 1 && selected <= maxSelections;
+  }
+
+  // Check if all required groups are satisfied
+  bool get _canAddToCart {
+    final variations = _productData?['variations'] as List? ?? [];
+    final choiceGroups = _productData?['choiceGroups'] as List? ?? [];
+
+    // If there are variations, one must be selected
+    if (variations.isNotEmpty && _selectedVariationIndex == null) {
+      return false;
     }
+
+    // Check all required choice groups
+    for (int i = 0; i < choiceGroups.length; i++) {
+      final group = choiceGroups[i] as Map<String, dynamic>;
+      if (group['isRequired'] == true) {
+        if (!_isChoiceGroupComplete(i)) return false;
+      }
+    }
+
+    return true;
   }
 
-  // ------------------------------------------------------------
-  // TOTAL PRICE LOGIC (Option B — FULL PRICE)
-  // ------------------------------------------------------------
-  int get appliedSizePrice =>
-      selectedSizePrice > 0 ? selectedSizePrice : basePrice;
+  // Update choices total when selection changes
+  void _updateChoicesTotal() {
+    double total = 0;
+    final choiceGroups = _productData?['choiceGroups'] as List? ?? [];
 
-  int computeTotal() {
-    return (appliedSizePrice + toppingsTotal) * quantity;
+    for (int groupIndex = 0; groupIndex < choiceGroups.length; groupIndex++) {
+      final group = choiceGroups[groupIndex] as Map<String, dynamic>;
+      final choices = group['choices'] as List? ?? [];
+      final selectedIndices = _selectedChoices[groupIndex] ?? {};
+
+      for (int choiceIndex in selectedIndices) {
+        if (choiceIndex < choices.length) {
+          final choice = choices[choiceIndex] as Map<String, dynamic>;
+          total += ((choice['price'] as num?) ?? 0).toDouble();
+        }
+      }
+    }
+
+    setState(() => _choicesTotal = total);
   }
 
-  bool sameToppings(List a, List b) {
-    if (a.length != b.length) return false;
-    final A = a.map((e) => e.toString()).toList()..sort();
-    final B = b.map((e) => e.toString()).toList()..sort();
-    return A.toString() == B.toString();
+  // Toggle a choice selection
+  void _toggleChoice(int groupIndex, int choiceIndex) {
+    final groups = _productData?['choiceGroups'] as List? ?? [];
+    if (groupIndex >= groups.length) return;
+
+    final group = groups[groupIndex] as Map<String, dynamic>;
+    final maxSelections = (group['maxSelections'] as num?)?.toInt() ?? 1;
+
+    setState(() {
+      final currentSet = _selectedChoices[groupIndex] ?? {};
+
+      if (currentSet.contains(choiceIndex)) {
+        // Deselect
+        currentSet.remove(choiceIndex);
+      } else {
+        // Select
+        if (maxSelections == 1) {
+          // Single selection - replace
+          currentSet.clear();
+          currentSet.add(choiceIndex);
+        } else {
+          // Multi-selection - check limit
+          if (currentSet.length < maxSelections) {
+            currentSet.add(choiceIndex);
+          }
+        }
+      }
+
+      _selectedChoices[groupIndex] = currentSet;
+    });
+
+    _updateChoicesTotal();
   }
 
-  Future<void> addToCart() async {
-    if (doc == null) return;
+  Future<void> _addToCart() async {
+    if (_productData == null || !_canAddToCart) return;
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final cartRef = FirebaseFirestore.instance
@@ -107,31 +198,60 @@ class _ProductPageState extends State<ProductPage> {
         .doc(uid)
         .collection("cartItems");
 
-    final toppingsList = selectedToppings.toList();
+    // Build selected choices list
+    final List<Map<String, dynamic>> selectedChoicesList = [];
+    final choiceGroups = _productData!['choiceGroups'] as List? ?? [];
 
+    for (int groupIndex = 0; groupIndex < choiceGroups.length; groupIndex++) {
+      final group = choiceGroups[groupIndex] as Map<String, dynamic>;
+      final choices = group['choices'] as List? ?? [];
+      final selectedIndices = _selectedChoices[groupIndex] ?? {};
+
+      for (int choiceIndex in selectedIndices) {
+        if (choiceIndex < choices.length) {
+          final choice = choices[choiceIndex] as Map<String, dynamic>;
+          selectedChoicesList.add({
+            'groupName': group['name'],
+            'name': choice['name'],
+            'price': choice['price'],
+          });
+        }
+      }
+    }
+
+    // Get variation info
+    String variationName = '';
+    final variations = _productData!['variations'] as List? ?? [];
+    if (_selectedVariationIndex != null &&
+        _selectedVariationIndex! < variations.length) {
+      variationName =
+          (variations[_selectedVariationIndex!] as Map)['name']?.toString() ??
+          '';
+    }
+
+    // Check for existing matching cart item
     final match =
         await cartRef
             .where("storeId", isEqualTo: widget.storeId)
             .where("productId", isEqualTo: widget.productId)
-            .where("sizeName", isEqualTo: selectedSize ?? "")
-            .where("sugarLevel", isEqualTo: selectedSugar ?? "")
-            .where("iceLevel", isEqualTo: selectedIce ?? "")
+            .where("variationName", isEqualTo: variationName)
             .get();
 
     bool merged = false;
 
-    for (var x in match.docs) {
-      final data = x.data();
-      final existingT = List.from(data["toppings"] ?? []);
+    for (var doc in match.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final existingChoices = List<Map<String, dynamic>>.from(
+        data["selectedChoices"] ?? [],
+      );
 
-      if (sameToppings(existingT, toppingsList)) {
-        int newQty = (data["quantity"] ?? 1) + quantity;
-
-        await x.reference.update({
+      // Compare choices
+      if (_sameChoices(existingChoices, selectedChoicesList)) {
+        int newQty = ((data["quantity"] as num?) ?? 1).toInt() + _quantity;
+        await doc.reference.update({
           "quantity": newQty,
-          "lineTotal": newQty * (appliedSizePrice + toppingsTotal),
+          "lineTotal": newQty * (_appliedPrice + _choicesTotal),
         });
-
         merged = true;
         break;
       }
@@ -141,32 +261,47 @@ class _ProductPageState extends State<ProductPage> {
       await cartRef.add({
         "storeId": widget.storeId,
         "productId": widget.productId,
-        "productName": doc!["name"],
-        "imageUrl": doc!["imageUrl"],
-        "basePrice": appliedSizePrice,
-        "sizeName": selectedSize ?? "",
-        "sizePrice": appliedSizePrice,
-        "sugarLevel": selectedSugar ?? "",
-        "iceLevel": selectedIce ?? "",
-        "toppings": toppingsList,
-        "toppingsTotal": toppingsTotal,
-        "note": noteCtrl.text.trim(),
-        "quantity": quantity,
-        "lineTotal": computeTotal(),
+        "productName": _productData!["name"],
+        "imageUrl": _productData!["imageUrl"],
+        "basePrice": _appliedPrice,
+        "variationName": variationName,
+        "variationPrice": _selectedVariationPrice,
+        "selectedChoices": selectedChoicesList,
+        "choicesTotal": _choicesTotal,
+        "note": _noteCtrl.text.trim(),
+        "quantity": _quantity,
+        "lineTotal": _totalPrice,
         "createdAt": DateTime.now(),
       });
     }
 
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
+  }
+
+  bool _sameChoices(
+    List<Map<String, dynamic>> a,
+    List<Map<String, dynamic>> b,
+  ) {
+    if (a.length != b.length) return false;
+    final aNames =
+        a.map((e) => '${e['groupName']}-${e['name']}').toList()..sort();
+    final bNames =
+        b.map((e) => '${e['groupName']}-${e['name']}').toList()..sort();
+    return aNames.toString() == bNames.toString();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (doc == null) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
-      return Scaffold(
-        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
-        body: Center(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_isLoading) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.backgroundDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Center(
           child: CircularProgressIndicator(
             color: isDark ? AppColors.primaryLight : AppColors.primary,
           ),
@@ -174,43 +309,73 @@ class _ProductPageState extends State<ProductPage> {
       );
     }
 
-    final data = doc!.data() as Map<String, dynamic>;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  _sliverHeader(data, isDark),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: _buildBody(data, isDark),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            _bottomBar(isDark),
-          ],
+    if (_productData == null) {
+      return Container(
+        height: 300,
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.backgroundDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
+        child: Center(
+          child: Text(
+            'Product not found',
+            style: TextStyle(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.backgroundDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                _buildHeader(isDark),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: _buildBody(isDark),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _buildBottomBar(isDark),
+        ],
       ),
     );
   }
 
-  // ------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------
-  SliverAppBar _sliverHeader(Map data, bool isDark) {
+  // ============================================================
+  // HEADER with product image
+  // ============================================================
+  SliverAppBar _buildHeader(bool isDark) {
+    final imageUrl = _productData?['imageUrl']?.toString() ?? '';
+
     return SliverAppBar(
       pinned: true,
-      expandedHeight: 280,
+      expandedHeight: 260,
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       elevation: 0,
+      automaticallyImplyLeading: false,
       leading: GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Padding(
@@ -236,10 +401,10 @@ class _ProductPageState extends State<ProductPage> {
         ),
       ),
       title: AnimatedOpacity(
-        opacity: collapsed ? 1 : 0,
+        opacity: _collapsed ? 1 : 0,
         duration: const Duration(milliseconds: 200),
         child: Text(
-          data["name"] ?? '',
+          _productData?['name'] ?? '',
           style: TextStyle(
             color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             fontWeight: FontWeight.w600,
@@ -247,31 +412,60 @@ class _ProductPageState extends State<ProductPage> {
         ),
       ),
       flexibleSpace: LayoutBuilder(
-        builder: (context, c) {
-          bool collapse = c.biggest.height < 150;
-
-          if (collapse != collapsed) {
+        builder: (context, constraints) {
+          bool collapse = constraints.biggest.height < 150;
+          if (collapse != _collapsed) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) setState(() => collapsed = collapse);
+              if (mounted) setState(() => _collapsed = collapse);
             });
           }
 
           return FlexibleSpaceBar(
             background: Center(
-              child: Image.network(
-                data["imageUrl"] ?? '',
-                height: 220,
-                fit: BoxFit.contain,
-                errorBuilder:
-                    (_, __, ___) => Icon(
-                      Iconsax.image,
-                      size: 64,
-                      color:
-                          isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiary,
-                    ),
-              ),
+              child:
+                  imageUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        height: 200,
+                        fit: BoxFit.contain,
+                        placeholder:
+                            (_, __) => Container(
+                              height: 200,
+                              width: 200,
+                              decoration: BoxDecoration(
+                                color:
+                                    isDark
+                                        ? AppColors.surfaceVariantDark
+                                        : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(
+                                Iconsax.image,
+                                size: 48,
+                                color:
+                                    isDark
+                                        ? AppColors.textTertiaryDark
+                                        : AppColors.textTertiary,
+                              ),
+                            ),
+                        errorWidget:
+                            (_, __, ___) => Icon(
+                              Iconsax.image,
+                              size: 64,
+                              color:
+                                  isDark
+                                      ? AppColors.textTertiaryDark
+                                      : AppColors.textTertiary,
+                            ),
+                      )
+                      : Icon(
+                        Iconsax.image,
+                        size: 64,
+                        color:
+                            isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
+                      ),
             ),
           );
         },
@@ -279,39 +473,32 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  // ------------------------------------------------------------
-  // BODY
-  // ------------------------------------------------------------
-  Widget _buildBody(Map data, bool isDark) {
+  // ============================================================
+  // BODY - Product info, variations, price, choice groups
+  // ============================================================
+  Widget _buildBody(bool isDark) {
+    final variations = _productData?['variations'] as List? ?? [];
+    final choiceGroups = _productData?['choiceGroups'] as List? ?? [];
+    final description = _productData?['description']?.toString();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ---- PRODUCT INFO ----
         Text(
-          data["name"] ?? '',
+          _productData?['name'] ?? '',
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
 
-        // PRICE DISPLAY (FIXED)
-        Text(
-          "₱$appliedSizePrice",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: isDark ? AppColors.primaryLight : AppColors.primary,
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // DESCRIPTION
-        if (data["description"] != null)
+        // Description
+        if (description != null && description.isNotEmpty) ...[
           Text(
-            data["description"],
+            description,
             style: TextStyle(
               fontSize: 14,
               color:
@@ -320,182 +507,86 @@ class _ProductPageState extends State<ProductPage> {
                       : AppColors.textSecondary,
             ),
           ),
+          const SizedBox(height: 16),
+        ],
 
-        const SizedBox(height: 25),
-
-        // SIZE REQUIRED
-        _sectionTitle("Size", required: true, keyName: "size", isDark: isDark),
-        _container(
-          Column(
-            children: List.generate(data["size"]?.length ?? 0, (i) {
-              final s = data["size"][i];
-              return RadioListTile(
-                title: Text(
-                  "${s["name"]}  (₱${s["price"]})",
-                  style: TextStyle(
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                value: s["name"],
-                groupValue: selectedSize,
-                activeColor:
-                    isDark ? AppColors.primaryLight : AppColors.primary,
-                onChanged: (v) {
-                  setState(() {
-                    selectedSize = v.toString();
-                    selectedSizePrice = int.parse(s["price"].toString());
-                  });
-                },
-              );
-            }),
+        // ---- PRICE DISPLAY ----
+        Text(
+          '₱${_appliedPrice.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: isDark ? AppColors.primaryLight : AppColors.primary,
           ),
-          isDark,
         ),
 
-        const SizedBox(height: 25),
+        const SizedBox(height: 24),
 
-        // SUGAR REQUIRED
-        _sectionTitle(
-          "Sugar Level",
-          required: true,
-          keyName: "sugar",
-          isDark: isDark,
-        ),
-        _container(
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: List.generate(data["sugarOptions"]?.length ?? 0, (i) {
-              final opt = data["sugarOptions"][i];
-              final isSelected = selectedSugar == opt;
-              return ChoiceChip(
-                label: Text(
-                  opt,
-                  style: TextStyle(
-                    color:
-                        isSelected
-                            ? Colors.white
-                            : (isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary),
-                  ),
-                ),
-                selected: isSelected,
-                selectedColor:
-                    isDark ? AppColors.primaryLight : AppColors.primary,
-                backgroundColor:
-                    isDark
-                        ? AppColors.surfaceVariantDark
-                        : Colors.grey.shade200,
-                onSelected: (_) => setState(() => selectedSugar = opt),
-              );
-            }),
+        // ---- VARIATIONS (Group Variation) ----
+        if (variations.isNotEmpty) ...[
+          _buildSectionTitle(
+            'Size / Variation',
+            required: true,
+            isCompleted: _selectedVariationIndex != null,
+            isDark: isDark,
           ),
-          isDark,
-        ),
+          const SizedBox(height: 10),
+          _buildContainer(
+            Column(
+              children: List.generate(variations.length, (index) {
+                final v = variations[index] as Map<String, dynamic>;
+                final name = v['name']?.toString() ?? '';
+                final price = ((v['price'] as num?) ?? 0).toDouble();
+                final isSelected = _selectedVariationIndex == index;
 
-        const SizedBox(height: 25),
-
-        // ICE REQUIRED
-        _sectionTitle(
-          "Ice Level",
-          required: true,
-          keyName: "ice",
-          isDark: isDark,
-        ),
-        _container(
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: List.generate(data["iceOptions"]?.length ?? 0, (i) {
-              final opt = data["iceOptions"][i];
-              final isSelected = selectedIce == opt;
-              return ChoiceChip(
-                label: Text(
-                  opt,
-                  style: TextStyle(
-                    color:
-                        isSelected
-                            ? Colors.white
-                            : (isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary),
+                return RadioListTile<int>(
+                  title: Text(
+                    '$name  (₱${price.toStringAsFixed(0)})',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                selected: isSelected,
-                selectedColor:
-                    isDark ? AppColors.primaryLight : AppColors.primary,
-                backgroundColor:
-                    isDark
-                        ? AppColors.surfaceVariantDark
-                        : Colors.grey.shade200,
-                onSelected: (_) => setState(() => selectedIce = opt),
-              );
-            }),
+                  value: index,
+                  groupValue: _selectedVariationIndex,
+                  activeColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedVariationIndex = val;
+                      _selectedVariationPrice = price;
+                    });
+                  },
+                );
+              }),
+            ),
+            isDark,
           ),
-          isDark,
-        ),
+          const SizedBox(height: 24),
+        ],
 
-        const SizedBox(height: 25),
+        // ---- CHOICE GROUPS ----
+        ...choiceGroups.asMap().entries.map((entry) {
+          final groupIndex = entry.key;
+          final group = entry.value as Map<String, dynamic>;
+          return _buildChoiceGroup(groupIndex, group, isDark);
+        }),
 
-        // TOPPINGS OPTIONAL
-        _sectionTitle("Toppings", isDark: isDark),
-        _container(
-          Column(
-            children: List.generate(data["toppings"]?.length ?? 0, (i) {
-              final t = data["toppings"][i];
-              final added = selectedToppings.any((x) => x["name"] == t["name"]);
-              return CheckboxListTile(
-                title: Text(
-                  "${t["name"]}  (+₱${t["price"]})",
-                  style: TextStyle(
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                value: added,
-                activeColor:
-                    isDark ? AppColors.primaryLight : AppColors.primary,
-                checkColor: Colors.white,
-                onChanged: (v) {
-                  setState(() {
-                    if (v == true) {
-                      selectedToppings.add(t);
-                    } else {
-                      selectedToppings.removeWhere(
-                        (x) => x["name"] == t["name"],
-                      );
-                    }
-                    toppingsTotal = selectedToppings.fold(
-                      0,
-                      (sum, x) => sum + int.parse(x["price"].toString()),
-                    );
-                  });
-                },
-              );
-            }),
-          ),
-          isDark,
-        ),
-
-        const SizedBox(height: 25),
-
-        _sectionTitle("Note to Vendor", isDark: isDark),
-        _container(
+        // ---- NOTE TO VENDOR ----
+        _buildSectionTitle('Note to Vendor', isDark: isDark),
+        const SizedBox(height: 10),
+        _buildContainer(
           TextField(
-            controller: noteCtrl,
+            controller: _noteCtrl,
             maxLines: 2,
             style: TextStyle(
               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
             decoration: InputDecoration(
               border: InputBorder.none,
-              hintText: "Add your request (optional)",
+              hintText: 'Add your request (optional)',
               hintStyle: TextStyle(
                 color:
                     isDark
@@ -507,31 +598,142 @@ class _ProductPageState extends State<ProductPage> {
           isDark,
         ),
 
-        const SizedBox(height: 140),
+        const SizedBox(height: 120),
       ],
     );
   }
 
-  // ------------------------------------------------------------
-  // SECTION TITLE UI
-  // ------------------------------------------------------------
-  Widget _sectionTitle(
+  // ============================================================
+  // CHOICE GROUP BUILDER
+  // ============================================================
+  Widget _buildChoiceGroup(
+    int groupIndex,
+    Map<String, dynamic> group,
+    bool isDark,
+  ) {
+    final name = group['name']?.toString() ?? 'Options';
+    final isRequired = group['isRequired'] ?? false;
+    final maxSelections = (group['maxSelections'] as num?)?.toInt() ?? 1;
+    final choices = group['choices'] as List? ?? [];
+    final selectedSet = _selectedChoices[groupIndex] ?? {};
+    final isComplete = _isChoiceGroupComplete(groupIndex);
+
+    String subtitle = '';
+    if (maxSelections == 1) {
+      subtitle = 'Select 1';
+    } else {
+      subtitle = 'Select up to $maxSelections';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+          name,
+          required: isRequired,
+          isCompleted: isComplete,
+          subtitle: subtitle,
+          isDark: isDark,
+        ),
+        const SizedBox(height: 10),
+        _buildContainer(
+          Column(
+            children: List.generate(choices.length, (choiceIndex) {
+              final choice = choices[choiceIndex] as Map<String, dynamic>;
+              final choiceName = choice['name']?.toString() ?? '';
+              final choicePrice = ((choice['price'] as num?) ?? 0).toDouble();
+              final isSelected = selectedSet.contains(choiceIndex);
+
+              if (maxSelections == 1) {
+                // Single select - use radio
+                return RadioListTile<int>(
+                  title: Text(
+                    choicePrice > 0
+                        ? '$choiceName  (+₱${choicePrice.toStringAsFixed(0)})'
+                        : choiceName,
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  value: choiceIndex,
+                  groupValue: selectedSet.isNotEmpty ? selectedSet.first : null,
+                  activeColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
+                  onChanged: (_) => _toggleChoice(groupIndex, choiceIndex),
+                );
+              } else {
+                // Multi-select - use checkbox
+                return CheckboxListTile(
+                  title: Text(
+                    choicePrice > 0
+                        ? '$choiceName  (+₱${choicePrice.toStringAsFixed(0)})'
+                        : choiceName,
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  value: isSelected,
+                  activeColor:
+                      isDark ? AppColors.primaryLight : AppColors.primary,
+                  checkColor: Colors.white,
+                  onChanged: (_) => _toggleChoice(groupIndex, choiceIndex),
+                );
+              }
+            }),
+          ),
+          isDark,
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  // ============================================================
+  // SECTION TITLE
+  // ============================================================
+  Widget _buildSectionTitle(
     String text, {
     bool required = false,
-    String keyName = "",
+    bool isCompleted = false,
+    String? subtitle,
     required bool isDark,
   }) {
-    bool done = required ? isCompleted(keyName) : false;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          text,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary,
+                  ),
+                ),
+            ],
           ),
         ),
         if (required)
@@ -539,7 +741,7 @@ class _ProductPageState extends State<ProductPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color:
-                  done
+                  isCompleted
                       ? (isDark
                           ? AppColors.surfaceVariantDark
                           : Colors.grey.shade300)
@@ -549,10 +751,10 @@ class _ProductPageState extends State<ProductPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              done ? "Completed" : "Required",
+              isCompleted ? 'Completed' : 'Required',
               style: TextStyle(
                 color:
-                    done
+                    isCompleted
                         ? (isDark
                             ? AppColors.textSecondaryDark
                             : Colors.black54)
@@ -571,7 +773,7 @@ class _ProductPageState extends State<ProductPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              "Optional",
+              'Optional',
               style: TextStyle(
                 fontSize: 12,
                 color: isDark ? AppColors.textSecondaryDark : Colors.black54,
@@ -582,11 +784,10 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  Widget _container(Widget child, bool isDark) {
+  Widget _buildContainer(Widget child, bool isDark) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceVariantDark : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(16),
@@ -595,10 +796,10 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // BOTTOM BAR
-  // ------------------------------------------------------------
-  Widget _bottomBar(bool isDark) {
+  // ============================================================
+  Widget _buildBottomBar(bool isDark) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       decoration: BoxDecoration(
@@ -614,7 +815,7 @@ class _ProductPageState extends State<ProductPage> {
       ),
       child: Row(
         children: [
-          // QUANTITY
+          // Quantity selector
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
@@ -633,10 +834,10 @@ class _ProductPageState extends State<ProductPage> {
                             : AppColors.textPrimary,
                   ),
                   onPressed:
-                      quantity > 1 ? () => setState(() => quantity--) : null,
+                      _quantity > 1 ? () => setState(() => _quantity--) : null,
                 ),
                 Text(
-                  "$quantity",
+                  '$_quantity',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -654,23 +855,16 @@ class _ProductPageState extends State<ProductPage> {
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimary,
                   ),
-                  onPressed: () => setState(() => quantity++),
+                  onPressed: () => setState(() => _quantity++),
                 ),
               ],
             ),
           ),
-
           const SizedBox(width: 12),
-
-          // ADD TO CART
+          // Add to cart button
           Expanded(
             child: ElevatedButton(
-              onPressed:
-                  isCompleted("size") &&
-                          isCompleted("sugar") &&
-                          isCompleted("ice")
-                      ? addToCart
-                      : null,
+              onPressed: _canAddToCart ? _addToCart : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     isDark ? AppColors.primaryLight : AppColors.primary,
@@ -687,7 +881,7 @@ class _ProductPageState extends State<ProductPage> {
                 ),
               ),
               child: Text(
-                "Add to cart • ₱${computeTotal()}",
+                'Add to cart • ₱${_totalPrice.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

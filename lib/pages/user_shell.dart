@@ -1080,16 +1080,40 @@ class _CartPageState extends State<CartPage> {
     final data = doc.data() as Map<String, dynamic>;
     final productName = data['productName'] ?? '';
     final imageUrl = data['imageUrl'] ?? '';
-    final sizeName = data['sizeName'] ?? '';
-    final sugar = data['sugarLevel'] ?? '';
-    final ice = data['iceLevel'] ?? '';
     final qty = (data['quantity'] as num).toInt();
     final lineTotal = (data['lineTotal'] as num).toDouble();
 
-    String subtitle = '';
-    if (sizeName.isNotEmpty) subtitle = sizeName;
-    if (sugar.isNotEmpty) subtitle += subtitle.isEmpty ? sugar : ' • $sugar';
-    if (ice.isNotEmpty) subtitle += subtitle.isEmpty ? ice : ' • $ice';
+    // Build subtitle supporting both new and legacy cart item structures
+    final parts = <String>[];
+
+    // New structure: variationName + selectedChoices
+    final variationName = data['variationName'] ?? '';
+    final selectedChoices = List<Map<String, dynamic>>.from(
+      data['selectedChoices'] ?? [],
+    );
+
+    if (variationName.isNotEmpty) {
+      parts.add(variationName);
+    } else {
+      // Legacy: sizeName
+      final sizeName = data['sizeName'] ?? '';
+      if (sizeName.isNotEmpty) parts.add(sizeName);
+    }
+
+    if (selectedChoices.isNotEmpty) {
+      for (var choice in selectedChoices) {
+        final name = choice['name']?.toString() ?? '';
+        if (name.isNotEmpty) parts.add(name);
+      }
+    } else {
+      // Legacy: sugarLevel, iceLevel
+      final sugar = data['sugarLevel'] ?? '';
+      final ice = data['iceLevel'] ?? '';
+      if (sugar.isNotEmpty) parts.add(sugar);
+      if (ice.isNotEmpty) parts.add(ice);
+    }
+
+    final subtitle = parts.join(' • ');
 
     final unitPrice = qty > 0 ? (lineTotal / qty) : 0.0;
 

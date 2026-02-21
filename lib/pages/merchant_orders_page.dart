@@ -904,16 +904,39 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         final receiptItems =
             items.map((item) {
               final itemData = item as Map<String, dynamic>;
-              final name = itemData['name']?.toString() ?? 'Item';
-              final qty = (itemData['qty'] as num?)?.toInt() ?? 1;
-              final price = (itemData['price'] as num?)?.toDouble() ?? 0;
+              // Use correct field names from cart items
+              final name =
+                  itemData['productName']?.toString() ??
+                  itemData['name']?.toString() ??
+                  'Item';
+              final qty =
+                  (itemData['quantity'] as num?)?.toInt() ??
+                  (itemData['qty'] as num?)?.toInt() ??
+                  1;
+              // lineTotal is total for qty items, use it directly
+              final lineTotal =
+                  (itemData['lineTotal'] as num?)?.toDouble() ??
+                  (itemData['price'] as num?)?.toDouble() ??
+                  0;
 
+              // Variation name (new structure)
               String? variations;
-              if (itemData['selectedVariation'] != null) {
+              final variationName = itemData['variationName']?.toString();
+              if (variationName != null && variationName.isNotEmpty) {
+                variations = variationName;
+              } else if (itemData['selectedVariation'] != null) {
+                // Legacy support
                 final v = itemData['selectedVariation'] as Map<String, dynamic>;
                 variations = v['name']?.toString();
+              } else {
+                // Fallback to sizeName
+                final sizeName = itemData['sizeName']?.toString();
+                if (sizeName != null && sizeName.isNotEmpty) {
+                  variations = sizeName;
+                }
               }
 
+              // Choice groups (new structure)
               String? choiceGroups;
               if (itemData['selectedChoices'] is List) {
                 final choices = itemData['selectedChoices'] as List;
@@ -935,7 +958,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               return ReceiptItem(
                 name: name,
                 quantity: qty,
-                price: price * qty,
+                price: lineTotal, // lineTotal is already qty * unitPrice
                 variations: variations,
                 choiceGroups: choiceGroups,
               );
@@ -946,6 +969,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           (sum, item) => sum + item.price,
         );
 
+        // Calculate 12% VAT (Philippines standard)
+        final vat = ReceiptData.calculateVat(subtotal);
+        final totalWithVat = subtotal + vat;
+
         final receipt = ReceiptData(
           storeName: storeName ?? 'BytePlus Store',
           orderNumber: pickupNumber,
@@ -953,7 +980,8 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           pickupTime: pickupTime,
           items: receiptItems,
           subtotal: subtotal,
-          total: total,
+          vat: vat,
+          total: totalWithVat,
           note: note.isNotEmpty ? note : null,
         );
 

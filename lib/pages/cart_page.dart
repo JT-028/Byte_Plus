@@ -116,26 +116,84 @@ class _CartPageState extends State<CartPage> {
                                             : AppColors.textPrimary,
                                   ),
                                 ),
-                                Text(
-                                  "₱ ${(data['sizePrice'] ?? 0).toString()}",
-                                  style: TextStyle(
-                                    color:
-                                        isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondary,
-                                  ),
+                                // Price - use variationPrice if available, fallback to sizePrice
+                                Builder(
+                                  builder: (context) {
+                                    final variationPrice =
+                                        (data['variationPrice'] as num?)
+                                            ?.toDouble() ??
+                                        0;
+                                    final sizePrice =
+                                        (data['sizePrice'] as num?)
+                                            ?.toDouble() ??
+                                        0;
+                                    final price =
+                                        variationPrice > 0
+                                            ? variationPrice
+                                            : sizePrice;
+                                    return Text(
+                                      "₱ ${price.toStringAsFixed(0)}",
+                                      style: TextStyle(
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
+                                      ),
+                                    );
+                                  },
                                 ),
-                                if (((data['sizeName'] ?? "").toString())
-                                    .isNotEmpty)
-                                  Text(
-                                    "Size: ${data['sizeName']}",
-                                    style: TextStyle(
-                                      color:
-                                          isDark
-                                              ? AppColors.textSecondaryDark
-                                              : AppColors.textSecondary,
-                                    ),
-                                  ),
+                                // Variation/Size - new structure first, fallback to legacy
+                                Builder(
+                                  builder: (context) {
+                                    final variationName =
+                                        (data['variationName'] ?? '')
+                                            .toString();
+                                    final sizeName =
+                                        (data['sizeName'] ?? '').toString();
+                                    final displayName =
+                                        variationName.isNotEmpty
+                                            ? variationName
+                                            : sizeName;
+                                    if (displayName.isEmpty)
+                                      return const SizedBox.shrink();
+                                    return Text(
+                                      displayName,
+                                      style: TextStyle(
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
+                                      ),
+                                    );
+                                  },
+                                ),
+                                // Selected choices (new structure)
+                                Builder(
+                                  builder: (context) {
+                                    final selectedChoices =
+                                        List<Map<String, dynamic>>.from(
+                                          data['selectedChoices'] ?? [],
+                                        );
+                                    if (selectedChoices.isEmpty)
+                                      return const SizedBox.shrink();
+                                    final names = selectedChoices
+                                        .map((c) => c['name']?.toString() ?? '')
+                                        .where((n) => n.isNotEmpty)
+                                        .join(', ');
+                                    if (names.isEmpty)
+                                      return const SizedBox.shrink();
+                                    return Text(
+                                      names,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isDark
+                                                ? AppColors.textTertiaryDark
+                                                : AppColors.textTertiary,
+                                      ),
+                                    );
+                                  },
+                                ),
                                 Text(
                                   "Qty: ${(data['quantity'] ?? 1).toString()}",
                                   style: TextStyle(

@@ -126,14 +126,37 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
     final img = data["imageUrl"] ?? "";
     final price = (data["lineTotal"] ?? 0).toDouble();
 
-    final size = data["sizeName"] ?? "";
-    final sugar = data["sugarLevel"] ?? "";
-    final ice = data["iceLevel"] ?? "";
+    // Build subtitle supporting both new and legacy cart item structures
+    final parts = <String>[];
 
-    String subtitle = "";
-    if (size.isNotEmpty) subtitle = size;
-    if (sugar.isNotEmpty) subtitle += subtitle.isEmpty ? sugar : " • $sugar";
-    if (ice.isNotEmpty) subtitle += subtitle.isEmpty ? ice : " • $ice";
+    // New structure: variationName + selectedChoices
+    final variationName = data['variationName'] ?? '';
+    final selectedChoices = List<Map<String, dynamic>>.from(
+      data['selectedChoices'] ?? [],
+    );
+
+    if (variationName.isNotEmpty) {
+      parts.add(variationName);
+    } else {
+      // Legacy: sizeName
+      final size = data["sizeName"] ?? "";
+      if (size.isNotEmpty) parts.add(size);
+    }
+
+    if (selectedChoices.isNotEmpty) {
+      for (var choice in selectedChoices) {
+        final choiceName = choice['name']?.toString() ?? '';
+        if (choiceName.isNotEmpty) parts.add(choiceName);
+      }
+    } else {
+      // Legacy: sugarLevel, iceLevel
+      final sugar = data["sugarLevel"] ?? "";
+      final ice = data["iceLevel"] ?? "";
+      if (sugar.isNotEmpty) parts.add(sugar);
+      if (ice.isNotEmpty) parts.add(ice);
+    }
+
+    final subtitle = parts.join(' • ');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),

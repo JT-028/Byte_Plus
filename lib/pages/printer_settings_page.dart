@@ -222,6 +222,10 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
   }
 
   Future<void> _printTestPage() async {
+    const subtotal = 175.00;
+    final vat = ReceiptData.calculateVat(subtotal);
+    final total = subtotal + vat;
+
     final receipt = ReceiptData(
       storeName: 'Test Store',
       orderNumber: 'TEST-001',
@@ -237,8 +241,9 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
           variations: 'Large',
         ),
       ],
-      subtotal: 175.00,
-      total: 175.00,
+      subtotal: subtotal,
+      vat: vat,
+      total: total,
       note: 'This is a test print',
     );
 

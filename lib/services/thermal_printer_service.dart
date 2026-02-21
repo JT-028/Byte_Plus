@@ -468,6 +468,17 @@ class ThermalPrinterService {
         ),
       );
 
+      // VAT (12%)
+      bytes.addAll(
+        EscPosCommands.printTwoColumns(
+          'VAT (12%):',
+          'P${receipt.vat.toStringAsFixed(2)}',
+          charsPerLine,
+        ),
+      );
+
+      bytes.addAll(EscPosCommands.horizontalLine(charsPerLine, '-'));
+
       // Total (bold, larger)
       bytes.addAll(EscPosCommands.boldOn());
       bytes.addAll(EscPosCommands.doubleHeightOn());
@@ -636,6 +647,7 @@ class ReceiptData {
   final String? customerName;
   final List<ReceiptItem> items;
   final double subtotal;
+  final double vat; // 12% VAT (Philippines standard)
   final double total;
   final String? note;
 
@@ -647,9 +659,16 @@ class ReceiptData {
     this.customerName,
     required this.items,
     required this.subtotal,
+    required this.vat,
     required this.total,
     this.note,
   });
+
+  /// Calculate VAT from subtotal (12% VAT-exclusive)
+  static double calculateVat(double subtotal) => subtotal * 0.12;
+
+  /// Calculate total with VAT
+  static double calculateVatInclusive(double subtotal) => subtotal * 1.12;
 }
 
 /// Receipt item model
