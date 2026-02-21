@@ -311,6 +311,16 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
             final Map<String, List<DocumentSnapshot>> productsByCategory = {};
             final List<DocumentSnapshot> uncategorized = [];
 
+            // Track category names from category documents
+            final Set<String> categoryDocNames = {};
+            for (final cat in categories) {
+              final catData = cat.data() as Map<String, dynamic>?;
+              if (catData != null) {
+                final name = catData['name']?.toString();
+                if (name != null) categoryDocNames.add(name);
+              }
+            }
+
             for (final product in products) {
               final data = product.data() as Map<String, dynamic>?;
               if (data == null) continue;
@@ -324,23 +334,38 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
               }
             }
 
-            if (categories.isEmpty && products.isEmpty) {
+            // Get all unique category names (from docs + from products)
+            final allCategoryNames = <String>{
+              ...categoryDocNames,
+              ...productsByCategory.keys,
+            };
+
+            if (allCategoryNames.isEmpty && products.isEmpty) {
               return _emptyState(isDark);
             }
+
+            // Sort category names alphabetically
+            final sortedCategoryNames = allCategoryNames.toList()..sort();
 
             return SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
               child: Column(
                 children: [
-                  // Category sections
-                  ...categories.map((cat) {
-                    final catData = cat.data() as Map<String, dynamic>?;
-                    if (catData == null) return const SizedBox.shrink();
-                    final catName = catData['name']?.toString() ?? 'Unnamed';
+                  // Category sections (from both docs and product categories)
+                  ...sortedCategoryNames.map((catName) {
+                    // Find the category doc ID if it exists
+                    String catId = catName.toLowerCase().replaceAll(' ', '_');
+                    for (final cat in categories) {
+                      final catData = cat.data() as Map<String, dynamic>?;
+                      if (catData?['name']?.toString() == catName) {
+                        catId = cat.id;
+                        break;
+                      }
+                    }
                     final catProducts = productsByCategory[catName] ?? [];
                     return _categorySection(
                       catName,
-                      cat.id,
+                      catId,
                       catProducts,
                       isDark,
                     );

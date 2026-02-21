@@ -922,7 +922,7 @@ class _AddItemPageState extends State<AddItemPage> {
                           value: isRequired,
                           onChanged:
                               (val) => setSheetState(() => isRequired = val),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                         ),
                       ],
                     ),
