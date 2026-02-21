@@ -28,10 +28,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          _showLoadingOverlay();
-          await Future.delayed(const Duration(milliseconds: 50));
-          if (mounted) Navigator.pop(context); // Dismiss loading
+        onPressed: () {
           _showCreateUserDialog(isDark);
         },
         backgroundColor: AppColors.primary,
@@ -362,19 +359,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               if (value.startsWith('role_')) {
                 _changeRole(doc.id, value.substring(5));
               } else if (value == 'assign_store') {
-                _showLoadingOverlay();
-                await Future.delayed(const Duration(milliseconds: 50));
-                if (mounted) Navigator.pop(context); // Dismiss loading
                 _showAssignStoreDialog(doc.id, storeId, isDark);
               } else if (value == 'edit_user') {
-                _showLoadingOverlay();
-                await Future.delayed(const Duration(milliseconds: 50));
-                if (mounted) Navigator.pop(context); // Dismiss loading
                 _showEditUserDialog(doc.id, name, email, role, isDark);
               } else if (value == 'delete_user') {
-                _showLoadingOverlay();
-                await Future.delayed(const Duration(milliseconds: 50));
-                if (mounted) Navigator.pop(context); // Dismiss loading
                 _deleteUser(doc.id, name);
               }
             },
@@ -477,13 +465,48 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  /// Show a loading overlay to prevent multiple clicks
-  void _showLoadingOverlay() {
+  /// Show a full-screen loading overlay to prevent UI interactions
+  void _showLoadingOverlay(bool isDark, String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black26,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+      barrierColor: Colors.black54,
+      builder:
+          (context) => PopScope(
+            canPop: false,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color:
+                            isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
     );
   }
 
@@ -615,51 +638,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         }
       }
     }
-  }
-
-  /// Show a full-screen loading overlay
-  void _showLoadingOverlay(bool isDark, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black54,
-      builder:
-          (context) => PopScope(
-            canPop: false,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      message,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-    );
   }
 
   /// Prompt admin for their password
