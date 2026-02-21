@@ -464,112 +464,109 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
       ),
       builder:
           (sheetContext) => StatefulBuilder(
-            builder:
-                (context, setSheetState) => Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    20,
-                    20,
-                    MediaQuery.of(context).viewInsets.bottom + 20,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _sheetHandle(isDark),
-                        const SizedBox(height: 20),
-                        Text(
-                          'Edit Store',
+            builder: (context, setSheetState) {
+              final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+              return AnimatedPadding(
+                duration: const Duration(milliseconds: 100),
+                padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 20),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _sheetHandle(isDark),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Edit Store',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _textField(
+                        nameController,
+                        'Store Name',
+                        Iconsax.shop,
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _textField(
+                        descController,
+                        'Description',
+                        Iconsax.document_text,
+                        isDark,
+                      ),
+                      const SizedBox(height: 12),
+                      _textField(
+                        logoController,
+                        'Logo URL',
+                        Iconsax.image,
+                        isDark,
+                      ),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        value: isActive,
+                        onChanged: (val) => setSheetState(() => isActive = val),
+                        title: Text(
+                          'Store Active',
                           style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
                             color:
                                 isDark
                                     ? AppColors.textPrimaryDark
                                     : AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        _textField(
-                          nameController,
-                          'Store Name',
-                          Iconsax.shop,
-                          isDark,
-                        ),
-                        const SizedBox(height: 12),
-                        _textField(
-                          descController,
-                          'Description',
-                          Iconsax.document_text,
-                          isDark,
-                        ),
-                        const SizedBox(height: 12),
-                        _textField(
-                          logoController,
-                          'Logo URL',
-                          Iconsax.image,
-                          isDark,
-                        ),
-                        const SizedBox(height: 16),
-                        SwitchListTile(
-                          value: isActive,
-                          onChanged:
-                              (val) => setSheetState(() => isActive = val),
-                          title: Text(
-                            'Store Active',
-                            style: TextStyle(
-                              color:
-                                  isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.textPrimary,
-                            ),
-                          ),
-                          activeThumbColor: AppColors.primary,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        const SizedBox(height: 20),
-                        _actionButtons(
-                          isDark: isDark,
-                          onCancel: () => Navigator.pop(context),
-                          onConfirm: () async {
-                            final name = nameController.text.trim();
-                            if (name.isEmpty) {
-                              await AppModalDialog.warning(
-                                context: context,
-                                title: 'Missing Information',
-                                message: 'Store name is required.',
-                              );
-                              return;
-                            }
+                        activeThumbColor: AppColors.primary,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: 20),
+                      _actionButtons(
+                        isDark: isDark,
+                        onCancel: () => Navigator.pop(context),
+                        onConfirm: () async {
+                          final name = nameController.text.trim();
+                          if (name.isEmpty) {
+                            await AppModalDialog.warning(
+                              context: context,
+                              title: 'Missing Information',
+                              message: 'Store name is required.',
+                            );
+                            return;
+                          }
 
-                            await FirebaseFirestore.instance
-                                .collection('stores')
-                                .doc(storeId)
-                                .update({
-                                  'name': name,
-                                  'description': descController.text.trim(),
-                                  'logoUrl': logoController.text.trim(),
-                                  'isActive': isActive,
-                                  'updatedAt': FieldValue.serverTimestamp(),
-                                });
+                          await FirebaseFirestore.instance
+                              .collection('stores')
+                              .doc(storeId)
+                              .update({
+                                'name': name,
+                                'description': descController.text.trim(),
+                                'logoUrl': logoController.text.trim(),
+                                'isActive': isActive,
+                                'updatedAt': FieldValue.serverTimestamp(),
+                              });
 
-                            if (mounted) {
-                              Navigator.pop(context);
-                              await AppModalDialog.success(
-                                context:
-                                    pageContext, // Use page context, not sheet context
-                                title: 'Store Updated',
-                                message: 'The store has been updated.',
-                              );
-                            }
-                          },
-                          confirmLabel: 'Save Changes',
-                        ),
-                      ],
-                    ),
+                          if (mounted) {
+                            Navigator.pop(context);
+                            await AppModalDialog.success(
+                              context:
+                                  pageContext, // Use page context, not sheet context
+                              title: 'Store Updated',
+                              message: 'The store has been updated.',
+                            );
+                          }
+                        },
+                        confirmLabel: 'Save Changes',
+                      ),
+                    ],
                   ),
                 ),
+              );
+            },
           ),
     );
   }
@@ -596,133 +593,128 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder:
-          (context) => Padding(
-            padding: EdgeInsets.fromLTRB(
-              20,
-              20,
-              20,
-              MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sheetHandle(isDark),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Geofence Settings',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                    ),
+      builder: (context) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        return AnimatedPadding(
+          duration: const Duration(milliseconds: 100),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sheetHandle(isDark),
+                const SizedBox(height: 20),
+                Text(
+                  'Geofence Settings',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Configure the pickup zone for "${data['name']}"',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color:
-                          isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondary,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Configure the pickup zone for "${data['name']}"',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
-                  const SizedBox(height: 20),
-                  _textField(
-                    latController,
-                    'Latitude',
-                    Iconsax.location,
-                    isDark,
-                    isNumber: true,
+                ),
+                const SizedBox(height: 20),
+                _textField(
+                  latController,
+                  'Latitude',
+                  Iconsax.location,
+                  isDark,
+                  isNumber: true,
+                ),
+                const SizedBox(height: 12),
+                _textField(
+                  lngController,
+                  'Longitude',
+                  Iconsax.location,
+                  isDark,
+                  isNumber: true,
+                ),
+                const SizedBox(height: 12),
+                _textField(
+                  radiusController,
+                  'Radius (meters)',
+                  Iconsax.maximize,
+                  isDark,
+                  isNumber: true,
+                ),
+                const SizedBox(height: 16),
+                // Info card
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 12),
-                  _textField(
-                    lngController,
-                    'Longitude',
-                    Iconsax.location,
-                    isDark,
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _textField(
-                    radiusController,
-                    'Radius (meters)',
-                    Iconsax.maximize,
-                    isDark,
-                    isNumber: true,
-                  ),
-                  const SizedBox(height: 16),
-                  // Info card
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.info.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Iconsax.info_circle,
-                          color: AppColors.info,
-                          size: 20,
+                  child: Row(
+                    children: [
+                      Icon(
+                        Iconsax.info_circle,
+                        color: AppColors.info,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Users must be within this radius to pick up orders from this store.',
+                          style: TextStyle(fontSize: 12, color: AppColors.info),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Users must be within this radius to pick up orders from this store.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.info,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
-                  _actionButtons(
-                    isDark: isDark,
-                    onCancel: () => Navigator.pop(context),
-                    onConfirm: () async {
-                      final lat = double.tryParse(latController.text.trim());
-                      final lng = double.tryParse(lngController.text.trim());
-                      final radius =
-                          double.tryParse(radiusController.text.trim()) ?? 100;
+                ),
+                const SizedBox(height: 20),
+                _actionButtons(
+                  isDark: isDark,
+                  onCancel: () => Navigator.pop(context),
+                  onConfirm: () async {
+                    final lat = double.tryParse(latController.text.trim());
+                    final lng = double.tryParse(lngController.text.trim());
+                    final radius =
+                        double.tryParse(radiusController.text.trim()) ?? 100;
 
-                      await FirebaseFirestore.instance
-                          .collection('stores')
-                          .doc(storeId)
-                          .update({
-                            'latitude': lat,
-                            'longitude': lng,
-                            'geofenceRadius': radius,
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          });
+                    await FirebaseFirestore.instance
+                        .collection('stores')
+                        .doc(storeId)
+                        .update({
+                          'latitude': lat,
+                          'longitude': lng,
+                          'geofenceRadius': radius,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        });
 
-                      if (mounted) {
-                        Navigator.pop(context);
-                        await AppModalDialog.success(
-                          context: context,
-                          title: 'Geofence Updated',
-                          message:
-                              lat != null && lng != null
-                                  ? 'The geofence has been configured.'
-                                  : 'The geofence has been cleared.',
-                        );
-                      }
-                    },
-                    confirmLabel: 'Save Geofence',
-                  ),
-                ],
-              ),
+                    if (mounted) {
+                      Navigator.pop(context);
+                      await AppModalDialog.success(
+                        context: context,
+                        title: 'Geofence Updated',
+                        message:
+                            lat != null && lng != null
+                                ? 'The geofence has been configured.'
+                                : 'The geofence has been cleared.',
+                      );
+                    }
+                  },
+                  confirmLabel: 'Save Geofence',
+                ),
+              ],
             ),
           ),
+        );
+      },
     );
   }
 

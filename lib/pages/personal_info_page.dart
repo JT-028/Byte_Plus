@@ -105,12 +105,14 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, modalSetState) {
-            return Padding(
+            final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+            return AnimatedPadding(
+              duration: const Duration(milliseconds: 100),
               padding: EdgeInsets.only(
                 left: 20,
                 right: 20,
                 top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                bottom: bottomInset + 20,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

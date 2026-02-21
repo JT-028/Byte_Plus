@@ -527,17 +527,30 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
     if (result != null && mounted) {
       try {
-        // Create user with Firebase Auth
         final email = result['email'] as String;
         final password = result['password'] as String;
         final name = result['name'] as String;
         final role = result['role'] as String;
 
-        // Create auth account
+        // Save admin credentials to re-authenticate after user creation
+        final adminUser = FirebaseAuth.instance.currentUser;
+        final adminEmail = adminUser?.email;
+
+        if (adminEmail == null) {
+          throw Exception('Admin email not found');
+        }
+
+        // Prompt admin for their password to re-authenticate after
+        final adminPassword = await _promptForAdminPassword(isDark);
+        if (adminPassword == null) {
+          return; // User cancelled
+        }
+
+        // Create auth account (this will sign in as the new user)
         final credential = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(email: email, password: password);
 
-        // Create Firestore document
+        // Create Firestore document for the new user
         await FirebaseFirestore.instance
             .collection('users')
             .doc(credential.user!.uid)
@@ -546,8 +559,17 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               'email': email,
               'role': role,
               'createdAt': FieldValue.serverTimestamp(),
-              'createdBy': FirebaseAuth.instance.currentUser?.uid,
+              'createdBy': adminUser?.uid,
             });
+
+        // Sign out the newly created user
+        await FirebaseAuth.instance.signOut();
+
+        // Re-authenticate as admin
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: adminEmail,
+          password: adminPassword,
+        );
 
         if (mounted) {
           await AppModalDialog.success(
@@ -557,6 +579,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } on FirebaseAuthException catch (e) {
+        // Try to re-sign in admin if something went wrong
+        await _tryReauthenticateAdmin();
+
         if (mounted) {
           await AppModalDialog.warning(
             context: context,
@@ -565,6 +590,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } catch (e) {
+        // Try to re-sign in admin if something went wrong
+        await _tryReauthenticateAdmin();
+
         if (mounted) {
           await AppModalDialog.warning(
             context: context,
@@ -572,6 +600,92 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             message: 'Failed to create user: $e',
           );
         }
+      }
+    }
+  }
+
+  /// Prompt admin for their password
+  Future<String?> _promptForAdminPassword(bool isDark) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Confirm Your Password',
+              style: TextStyle(
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter your admin password to continue creating this user.',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  obscureText: true,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: 'Your Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, null),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, controller.text),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+    );
+    controller.dispose();
+    return result;
+  }
+
+  /// Try to re-authenticate admin if session was lost
+  Future<void> _tryReauthenticateAdmin() async {
+    // If we're not signed in, redirect to login
+    if (FirebaseAuth.instance.currentUser == null) {
+      // The splash page will handle redirecting to login
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
       }
     }
   }
@@ -638,7 +752,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       context: context,
       title: 'Delete User?',
       message:
-          'Are you sure you want to delete "$userName"? This will disable their account and remove their data. This action cannot be undone.',
+          'Are you sure you want to delete "$userName"? This will disable their account and remove their app data.\n\nNote: The user will be blocked from logging in. To fully remove their authentication, delete their account from Firebase Console.',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       isDanger: true,
@@ -1018,13 +1132,17 @@ class _CreateEditUserSheetState extends State<_CreateEditUserSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Use viewInsets separately to avoid rebuilding entire tree
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
     return SafeArea(
-      child: Padding(
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 100),
         padding: EdgeInsets.only(
           left: 20,
           right: 20,
           top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          bottom: bottomInset + 20,
         ),
         child: SingleChildScrollView(
           child: Form(
