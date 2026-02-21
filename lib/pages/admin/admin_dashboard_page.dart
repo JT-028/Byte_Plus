@@ -90,7 +90,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
-          childAspectRatio: 1.4,
+          childAspectRatio: 1.15,
           children: [
             _statCard(
               title: 'Total Users',

@@ -189,25 +189,29 @@ class _SplashPageState extends State<SplashPage>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo
+                    // Logo with shadow
                     Container(
-                      width: 120,
-                      height: 120,
+                      width: 140,
+                      height: 140,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.xl),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                            spreadRadius: 5,
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: Image.asset(
-                        'assets/app/spcf_logo(white).png',
+                      child: Image.network(
+                        'https://res.cloudinary.com/ddg9ffo5r/image/upload/spcf_mzffy6',
                         fit: BoxFit.contain,
+                        errorBuilder:
+                            (context, error, stackTrace) => const Icon(
+                              Icons.image,
+                              size: 80,
+                              color: Colors.white,
+                            ),
                       ),
                     ),
 

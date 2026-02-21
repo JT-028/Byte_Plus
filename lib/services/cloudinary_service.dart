@@ -5,8 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 class CloudinaryService {
-  static const String cloudName = 'Byte_Plus';
+  // NOTE: Cloud name is case-sensitive - verify this matches your Cloudinary dashboard
+  static const String cloudName =
+      'ddg9ffo5r'; // Update this if different in your dashboard
   static const String uploadPreset = 'byteplus_menu';
+  static const String apiKey =
+      '114576144695534'; // Optional for unsigned uploads
 
   static String get _uploadUrl =>
       'https://api.cloudinary.com/v1_1/$cloudName/image/upload';
@@ -19,6 +23,7 @@ class CloudinaryService {
 
       // Add the upload preset (required for unsigned uploads)
       request.fields['upload_preset'] = uploadPreset;
+      request.fields['api_key'] = apiKey;
 
       // Add the image file
       request.files.add(
@@ -56,6 +61,7 @@ class CloudinaryService {
       final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
 
       request.fields['upload_preset'] = uploadPreset;
+      request.fields['api_key'] = apiKey;
 
       request.files.add(
         http.MultipartFile.fromBytes('file', bytes, filename: fileName),

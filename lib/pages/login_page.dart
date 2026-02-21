@@ -133,9 +133,15 @@ class _LoginPageState extends State<LoginPage> {
                     boxShadow: AppShadows.medium,
                   ),
                   padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Image.asset(
-                    'assets/app/spcf_logo(white).png',
+                  child: Image.network(
+                    'https://res.cloudinary.com/ddg9ffo5r/image/upload/spcf_mzffy6',
                     fit: BoxFit.contain,
+                    errorBuilder:
+                        (context, error, stackTrace) => const Icon(
+                          Icons.image,
+                          size: 40,
+                          color: Colors.white,
+                        ),
                   ),
                 ),
 
