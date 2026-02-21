@@ -146,6 +146,15 @@ class _AddItemPageState extends State<AddItemPage> {
           ),
         ),
         centerTitle: false,
+        actions:
+            isEditing
+                ? [
+                  IconButton(
+                    icon: const Icon(Iconsax.trash, color: AppColors.error),
+                    onPressed: _confirmDelete,
+                  ),
+                ]
+                : null,
       ),
       body: Stack(
         children: [
@@ -1223,6 +1232,50 @@ class _AddItemPageState extends State<AddItemPage> {
           context: context,
           title: 'Error',
           message: 'Failed to save product: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await AppModalDialog.confirm(
+      context: context,
+      title: 'Delete Product',
+      message:
+          'Are you sure you want to delete this product? This cannot be undone.',
+      confirmLabel: 'Delete',
+      isDanger: true,
+    );
+
+    if (confirmed == true) {
+      await _deleteProduct();
+    }
+  }
+
+  Future<void> _deleteProduct() async {
+    setState(() => _isLoading = true);
+
+    try {
+      await _menuCollection.doc(widget.itemId).delete();
+
+      if (mounted) {
+        Navigator.pop(context);
+        await AppModalDialog.success(
+          context: context,
+          title: 'Product Deleted',
+          message: 'The product has been deleted successfully.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        await AppModalDialog.error(
+          context: context,
+          title: 'Error',
+          message: 'Failed to delete product: $e',
         );
       }
     } finally {

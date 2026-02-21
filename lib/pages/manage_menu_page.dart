@@ -39,6 +39,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
 
   void _listenToStoreId() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    debugPrint('[ManageMenuPage] Current user UID: $uid');
     if (uid == null) {
       setState(() => storeIdLoaded = true);
       return;
@@ -54,12 +55,14 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
 
             if (doc.exists) {
               final loadedStoreId = doc.data()?['storeId']?.toString();
+              debugPrint('[ManageMenuPage] User doc storeId: $loadedStoreId');
               setState(() {
                 storeId =
                     (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
                 storeIdLoaded = true;
               });
             } else {
+              debugPrint('[ManageMenuPage] User doc does not exist');
               setState(() {
                 storeId = null;
                 storeIdLoaded = true;
@@ -281,18 +284,28 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   }
 
   Widget _buildCategoriesAndProducts(bool isDark) {
+    debugPrint('[ManageMenuPage] Building with storeId: $storeId');
     return StreamBuilder<QuerySnapshot>(
       stream: categoriesCollection.orderBy('name').snapshots(),
       builder: (context, catSnap) {
         return StreamBuilder<QuerySnapshot>(
           stream: menuCollection.orderBy('name').snapshots(),
           builder: (context, prodSnap) {
+            if (catSnap.hasError) {
+              debugPrint('[ManageMenuPage] Categories error: ${catSnap.error}');
+            }
+            if (prodSnap.hasError) {
+              debugPrint('[ManageMenuPage] Products error: ${prodSnap.error}');
+            }
             if (!catSnap.hasData || !prodSnap.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
 
             final categories = catSnap.data!.docs;
             final products = prodSnap.data!.docs;
+            debugPrint(
+              '[ManageMenuPage] Found ${categories.length} categories, ${products.length} products',
+            );
 
             // Group products by category
             final Map<String, List<DocumentSnapshot>> productsByCategory = {};
