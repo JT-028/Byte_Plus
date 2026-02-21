@@ -464,20 +464,6 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
           const SizedBox(height: 16),
 
-          // Print receipt button
-          _printButton(
-            storeId: storeId,
-            orderId: orderId,
-            pickupNumber: pickupNumber,
-            items: items,
-            total: total,
-            note: note,
-            pickupNow: pickupNow,
-            formattedTime: formattedTime,
-            isDark: isDark,
-          ),
-          const SizedBox(height: 12),
-
           // Actions
           _actionsRow(
             status: status,
@@ -684,241 +670,99 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     }
 
     if (status == "in-progress") {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: onMarkReady,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: onMarkReady,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Mark as Ready",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: const Text(
-            "Mark as Ready",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onReject,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.error),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
     if (status == "ready") {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: onPickedUp,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+      return Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: onPickedUp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Picked Up",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
           ),
-          child: const Text(
-            "Picked Up",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onReject,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.error),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       );
     }
 
     // Completed and Canceled: no actions
     return const SizedBox.shrink();
-  }
-
-  Widget _printButton({
-    required String storeId,
-    required String orderId,
-    required String pickupNumber,
-    required List<dynamic> items,
-    required double total,
-    required String note,
-    required bool pickupNow,
-    required String? formattedTime,
-    required bool isDark,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed:
-            () => _handlePrintReceipt(
-              storeId: storeId,
-              orderId: orderId,
-              pickupNumber: pickupNumber,
-              items: items,
-              total: total,
-              note: note,
-              pickupTime: pickupNow ? 'Now' : formattedTime,
-            ),
-        icon: Icon(
-          Iconsax.printer,
-          size: 18,
-          color:
-              _printerService.status == PrinterStatus.connected
-                  ? AppColors.primary
-                  : AppColors.textSecondary,
-        ),
-        label: Text(
-          _printerService.status == PrinterStatus.connected
-              ? 'Print Receipt'
-              : 'Connect Printer to Print',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color:
-                _printerService.status == PrinterStatus.connected
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
-          ),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(
-            color:
-                _printerService.status == PrinterStatus.connected
-                    ? AppColors.primary
-                    : (isDark ? AppColors.borderDark : AppColors.border),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handlePrintReceipt({
-    required String storeId,
-    required String orderId,
-    required String pickupNumber,
-    required List<dynamic> items,
-    required double total,
-    required String note,
-    String? pickupTime,
-  }) async {
-    // Check if printer is connected
-    if (_printerService.status != PrinterStatus.connected) {
-      final goToSettings = await AppModalDialog.confirm(
-        context: context,
-        title: 'Printer Not Connected',
-        message: 'Would you like to connect to a printer?',
-        confirmLabel: 'Settings',
-        cancelLabel: 'Cancel',
-      );
-
-      if (goToSettings == true && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const PrinterSettingsPage()),
-        );
-      }
-      return;
-    }
-
-    // Show printing dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _buildPrintingDialog(),
-    );
-
-    try {
-      // Build receipt items
-      final receiptItems =
-          items.map((item) {
-            final itemData = item as Map<String, dynamic>;
-            final name = itemData['name']?.toString() ?? 'Item';
-            final qty = (itemData['qty'] as num?)?.toInt() ?? 1;
-            final price = (itemData['price'] as num?)?.toDouble() ?? 0;
-
-            // Get variations
-            String? variations;
-            if (itemData['selectedVariation'] != null) {
-              final v = itemData['selectedVariation'] as Map<String, dynamic>;
-              variations = v['name']?.toString();
-            }
-
-            // Get choice groups
-            String? choiceGroups;
-            if (itemData['selectedChoices'] is List) {
-              final choices = itemData['selectedChoices'] as List;
-              final choiceNames =
-                  choices
-                      .map((c) {
-                        if (c is Map<String, dynamic>) {
-                          return c['name']?.toString() ?? '';
-                        }
-                        return '';
-                      })
-                      .where((s) => s.isNotEmpty)
-                      .toList();
-              if (choiceNames.isNotEmpty) {
-                choiceGroups = choiceNames.join(', ');
-              }
-            }
-
-            return ReceiptItem(
-              name: name,
-              quantity: qty,
-              price: price * qty,
-              variations: variations,
-              choiceGroups: choiceGroups,
-            );
-          }).toList();
-
-      // Calculate subtotal
-      final subtotal = receiptItems.fold<double>(
-        0.0,
-        (sum, item) => sum + item.price,
-      );
-
-      // Build receipt
-      final receipt = ReceiptData(
-        storeName: storeName ?? 'BytePlus Store',
-        orderNumber: pickupNumber,
-        dateTime: DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.now()),
-        pickupTime: pickupTime,
-        items: receiptItems,
-        subtotal: subtotal,
-        total: total,
-        note: note.isNotEmpty ? note : null,
-      );
-
-      // Print receipt
-      final success = await _printerService.printReceipt(receipt);
-
-      // Close printing dialog
-      if (mounted) Navigator.pop(context);
-
-      if (mounted) {
-        if (success) {
-          AppModalDialog.success(
-            context: context,
-            title: 'Receipt Printed',
-            message:
-                'Order $pickupNumber receipt has been printed successfully.',
-          );
-        } else {
-          AppModalDialog.error(
-            context: context,
-            title: 'Print Failed',
-            message:
-                'Could not print receipt. Please check printer connection.',
-          );
-        }
-      }
-    } catch (e) {
-      // Close printing dialog
-      if (mounted) Navigator.pop(context);
-
-      if (mounted) {
-        AppModalDialog.error(
-          context: context,
-          title: 'Print Error',
-          message: 'An error occurred while printing: $e',
-        );
-      }
-    }
   }
 
   Widget _buildPrintingDialog() {

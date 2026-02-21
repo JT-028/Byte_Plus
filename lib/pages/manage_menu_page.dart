@@ -9,6 +9,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/inventory_service.dart';
 import '../widgets/app_modal_dialog.dart';
+import 'add_item_page.dart';
+import 'add_category_page.dart';
 
 class ManageMenuPage extends StatefulWidget {
   const ManageMenuPage({super.key});
@@ -194,21 +196,23 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   Widget _addNewDropdown(bool isDark) {
     return PopupMenuButton<String>(
       onSelected: (value) async {
-        _showLoadingOverlay();
-        await Future.delayed(const Duration(milliseconds: 50));
-        if (mounted) Navigator.pop(context); // Dismiss loading
+        if (storeId == null) return;
         switch (value) {
+          case 'item':
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddItemPage(storeId: storeId!),
+              ),
+            );
+            break;
           case 'category':
-            _showAddCategoryDialog(isDark);
-            break;
-          case 'product':
-            _showAddProductDialog(isDark);
-            break;
-          case 'variation':
-            _showAddVariationDialog(isDark);
-            break;
-          case 'choiceGroup':
-            _showAddChoiceGroupDialog(isDark);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AddCategoryPage(storeId: storeId!),
+              ),
+            );
             break;
         }
       },
@@ -241,15 +245,8 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
       ),
       itemBuilder:
           (context) => [
+            _popupMenuItem('item', 'Item', Iconsax.box, isDark),
             _popupMenuItem('category', 'Category', Iconsax.folder, isDark),
-            _popupMenuItem('product', 'Product', Iconsax.box, isDark),
-            _popupMenuItem('variation', 'Variation', Iconsax.size, isDark),
-            _popupMenuItem(
-              'choiceGroup',
-              'Choice Group',
-              Iconsax.menu_board,
-              isDark,
-            ),
           ],
     );
   }
@@ -604,11 +601,18 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
           const SizedBox(width: 8),
           // Edit button
           GestureDetector(
-            onTap: () async {
-              _showLoadingOverlay();
-              await Future.delayed(const Duration(milliseconds: 50));
-              if (mounted) Navigator.pop(context); // Dismiss loading
-              _showEditProductDialog(doc.id, data, isDark);
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder:
+                      (context) => AddItemPage(
+                        storeId: storeId!,
+                        itemId: doc.id,
+                        existingData: data,
+                      ),
+                ),
+              );
             },
             child: Container(
               padding: const EdgeInsets.all(8),
@@ -1754,14 +1758,31 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                   const SizedBox(height: 20),
                   _optionTile(
                     icon: Iconsax.edit,
-                    label: 'Rename Category',
+                    label: 'Edit Category',
                     isDark: isDark,
                     onTap: () async {
                       Navigator.pop(context);
-                      _showLoadingOverlay();
-                      await Future.delayed(const Duration(milliseconds: 50));
-                      if (mounted) Navigator.pop(context); // Dismiss loading
-                      _renameCategory(categoryId, categoryName, isDark);
+                      // Fetch category data and navigate to edit page
+                      final catDoc =
+                          await FirebaseFirestore.instance
+                              .collection('stores')
+                              .doc(storeId)
+                              .collection('categories')
+                              .doc(categoryId)
+                              .get();
+                      if (mounted && catDoc.exists) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => AddCategoryPage(
+                                  storeId: storeId!,
+                                  categoryId: categoryId,
+                                  existingData: catDoc.data(),
+                                ),
+                          ),
+                        );
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
