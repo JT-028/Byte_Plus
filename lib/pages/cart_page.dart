@@ -297,13 +297,8 @@ class _CartPageState extends State<CartPage> {
         context: context,
         title: 'Order Successful!',
         message: 'Your order #$orderId has been placed.',
-        primaryLabel: 'View My Order',
+        primaryLabel: 'OK',
         onPrimaryPressed: () {
-          Navigator.pop(context);
-          Navigator.pushNamed(context, '/orders');
-        },
-        secondaryLabel: 'Back to Home',
-        onSecondaryPressed: () {
           Navigator.pop(context);
         },
       );

@@ -9,6 +9,7 @@ import 'login_page.dart';
 import 'user_shell.dart';
 import 'merchant_shell.dart';
 import 'admin_shell.dart';
+import 'location_permission_page.dart';
 import '../services/location_guard.dart';
 
 /// Splash screen that shows while Firebase initializes
@@ -122,16 +123,33 @@ class _SplashPageState extends State<SplashPage>
         child: destination,
       );
 
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => destination,
-          transitionDuration: const Duration(milliseconds: 500),
-          transitionsBuilder: (_, animation, __, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-        ),
-      );
+      // Show location permission page for students
+      // (merchants/admins may need different handling)
+      if (role == 'student') {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder:
+                (_, __, ___) =>
+                    LocationPermissionPage(destination: destination),
+            transitionDuration: const Duration(milliseconds: 500),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => destination,
+            transitionDuration: const Duration(milliseconds: 500),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) _navigateToLogin();
     }

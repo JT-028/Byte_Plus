@@ -9,6 +9,7 @@ import '../services/order_service.dart';
 import '../services/cart_service.dart';
 import '../utils/responsive_utils.dart';
 import '../widgets/app_modal_dialog.dart';
+import '../widgets/pickup_time_picker.dart';
 import 'store_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
@@ -926,21 +927,11 @@ class _CartPageState extends State<CartPage> {
                       : AppColors.textSecondary,
             ),
             onTap: () async {
-              final now = DateTime.now();
-              final timeOfDay = await showTimePicker(
-                context: context,
-                initialTime: TimeOfDay.fromDateTime(
-                  now.add(const Duration(minutes: 30)),
-                ),
+              final dt = await PickupTimePicker.show(
+                context,
+                initialTime: pickupTime ?? DateTime.now().add(const Duration(minutes: 30)),
               );
-              if (timeOfDay != null) {
-                final dt = DateTime(
-                  now.year,
-                  now.month,
-                  now.day,
-                  timeOfDay.hour,
-                  timeOfDay.minute,
-                );
+              if (dt != null) {
                 setState(() {
                   pickupNow = false;
                   pickupTime = dt;
@@ -1382,15 +1373,9 @@ class _CartPageState extends State<CartPage> {
                       context: context,
                       title: 'Order Successful!',
                       message: 'Your order has been placed successfully.',
-                      primaryLabel: 'View My Order',
+                      primaryLabel: 'OK',
                       onPrimaryPressed: () {
                         Navigator.pop(context);
-                        setState(() => selectedNav = 2);
-                      },
-                      secondaryLabel: 'Back to Home',
-                      onSecondaryPressed: () {
-                        Navigator.pop(context);
-                        setState(() => selectedNav = 0);
                       },
                     );
                   } catch (e) {
