@@ -929,7 +929,9 @@ class _CartPageState extends State<CartPage> {
             onTap: () async {
               final dt = await PickupTimePicker.show(
                 context,
-                initialTime: pickupTime ?? DateTime.now().add(const Duration(minutes: 30)),
+                initialTime:
+                    pickupTime ??
+                    DateTime.now().add(const Duration(minutes: 30)),
               );
               if (dt != null) {
                 setState(() {
