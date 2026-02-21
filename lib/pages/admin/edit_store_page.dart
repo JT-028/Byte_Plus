@@ -35,6 +35,21 @@ class _EditStorePageState extends State<EditStorePage> {
   bool _isActive = true;
   bool _isLoading = false;
 
+  // Category
+  static const List<String> _categoryOptions = [
+    'Drinks',
+    'Burger',
+    'Coffee',
+    'Chicken',
+    'Snacks',
+    'Desserts',
+  ];
+  final List<String> _selectedCategories = [];
+
+  // Operating Hours
+  TimeOfDay? _openingTime;
+  TimeOfDay? _closingTime;
+
   bool get isEditing => widget.storeId != null;
 
   @override
@@ -52,6 +67,30 @@ class _EditStorePageState extends State<EditStorePage> {
     _logoUrl = data['logoUrl']?.toString();
     _bannerUrl = data['bannerUrl']?.toString();
     _isActive = data['isActive'] ?? true;
+
+    // Load categories (supports multiple)
+    final cats = data['category'] as List<dynamic>?;
+    if (cats != null) {
+      _selectedCategories.addAll(cats.map((e) => e.toString()));
+    }
+
+    // Load operating hours
+    final openStr = data['openingTime']?.toString();
+    final closeStr = data['closingTime']?.toString();
+    if (openStr != null && openStr.contains(':')) {
+      final parts = openStr.split(':');
+      _openingTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    }
+    if (closeStr != null && closeStr.contains(':')) {
+      final parts = closeStr.split(':');
+      _closingTime = TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    }
   }
 
   @override
@@ -103,6 +142,8 @@ class _EditStorePageState extends State<EditStorePage> {
                 const SizedBox(height: 20),
                 _buildImagesSection(isDark),
                 const SizedBox(height: 20),
+                _buildOperatingHoursSection(isDark),
+                const SizedBox(height: 20),
                 _buildStatusSection(isDark),
                 const SizedBox(height: 32),
                 _buildSaveButton(isDark),
@@ -136,6 +177,221 @@ class _EditStorePageState extends State<EditStorePage> {
           'Enter description',
           isDark,
           maxLines: 3,
+        ),
+        const SizedBox(height: 16),
+        _labelText('Categories', isDark),
+        const SizedBox(height: 4),
+        Text(
+          'Select all that apply',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children:
+              _categoryOptions.map((cat) {
+                final isSelected = _selectedCategories.contains(cat);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedCategories.remove(cat);
+                      } else {
+                        _selectedCategories.add(cat);
+                      }
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isSelected
+                              ? AppColors.primary
+                              : (isDark
+                                  ? AppColors.backgroundDark
+                                  : Colors.grey.shade50),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color:
+                            isSelected
+                                ? AppColors.primary
+                                : (isDark
+                                    ? AppColors.borderDark
+                                    : AppColors.border),
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Text(
+                      cat,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        color:
+                            isSelected
+                                ? Colors.white
+                                : (isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+        ),
+      ],
+    );
+  }
+
+  String _formatTimeOfDay(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final min = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? 'AM' : 'PM';
+    return '$hour:$min $period';
+  }
+
+  Future<void> _pickTime({required bool isOpening}) async {
+    final initial =
+        isOpening
+            ? (_openingTime ?? const TimeOfDay(hour: 8, minute: 0))
+            : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
+    final picked = await showTimePicker(context: context, initialTime: initial);
+    if (picked != null) {
+      setState(() {
+        if (isOpening) {
+          _openingTime = picked;
+        } else {
+          _closingTime = picked;
+        }
+      });
+    }
+  }
+
+  Widget _buildOperatingHoursSection(bool isDark) {
+    return _sectionCard(
+      isDark: isDark,
+      title: 'Operating Hours',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelText('Opening Time', isDark),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _pickTime(isOpening: true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isDark
+                                ? AppColors.backgroundDark
+                                : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              isDark ? AppColors.borderDark : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.clock,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _openingTime != null
+                                ? _formatTimeOfDay(_openingTime!)
+                                : 'Set time',
+                            style: TextStyle(
+                              color:
+                                  _openingTime != null
+                                      ? (isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary)
+                                      : (isDark
+                                          ? AppColors.textTertiaryDark
+                                          : AppColors.textTertiary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labelText('Closing Time', isDark),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _pickTime(isOpening: false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isDark
+                                ? AppColors.backgroundDark
+                                : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color:
+                              isDark ? AppColors.borderDark : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Iconsax.clock,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _closingTime != null
+                                ? _formatTimeOfDay(_closingTime!)
+                                : 'Set time',
+                            style: TextStyle(
+                              color:
+                                  _closingTime != null
+                                      ? (isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary)
+                                      : (isDark
+                                          ? AppColors.textTertiaryDark
+                                          : AppColors.textTertiary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -213,7 +469,7 @@ class _EditStorePageState extends State<EditStorePage> {
                       : AppColors.textSecondary,
             ),
           ),
-          activeThumbColor: AppColors.primary,
+          activeColor: AppColors.primary,
           contentPadding: EdgeInsets.zero,
         ),
       ],
@@ -594,13 +850,22 @@ class _EditStorePageState extends State<EditStorePage> {
         false,
       );
 
-      final data = {
+      final data = <String, dynamic>{
         'name': name,
         'description': _descriptionController.text.trim(),
         'logoUrl': logoUrl ?? '',
         'bannerUrl': bannerUrl ?? '',
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
+        'category': _selectedCategories,
+        'openingTime':
+            _openingTime != null
+                ? '${_openingTime!.hour.toString().padLeft(2, '0')}:${_openingTime!.minute.toString().padLeft(2, '0')}'
+                : null,
+        'closingTime':
+            _closingTime != null
+                ? '${_closingTime!.hour.toString().padLeft(2, '0')}:${_closingTime!.minute.toString().padLeft(2, '0')}'
+                : null,
       };
 
       if (isEditing) {
@@ -647,7 +912,7 @@ class _EditStorePageState extends State<EditStorePage> {
       context: context,
       title: 'Delete Store',
       message:
-          'Are you sure you want to delete this store? This will also delete all menu items, categories, and orders. This cannot be undone.',
+          'Are you sure you want to delete this store? This will also delete all menu items and orders. This cannot be undone.',
       confirmLabel: 'Delete',
       isDanger: true,
     );
@@ -655,42 +920,17 @@ class _EditStorePageState extends State<EditStorePage> {
     if (confirmed == true) {
       setState(() => _isLoading = true);
       try {
-        final storeRef = FirebaseFirestore.instance
+        await FirebaseFirestore.instance
             .collection('stores')
-            .doc(widget.storeId);
-
-        // Delete all subcollections first
-        final batch = FirebaseFirestore.instance.batch();
-
-        // Delete menu items
-        final menuItems = await storeRef.collection('menu').get();
-        for (final doc in menuItems.docs) {
-          batch.delete(doc.reference);
-        }
-
-        // Delete categories
-        final categories = await storeRef.collection('categories').get();
-        for (final doc in categories.docs) {
-          batch.delete(doc.reference);
-        }
-
-        // Delete orders
-        final orders = await storeRef.collection('orders').get();
-        for (final doc in orders.docs) {
-          batch.delete(doc.reference);
-        }
-
-        await batch.commit();
-
-        // Now delete the store document
-        await storeRef.delete();
+            .doc(widget.storeId)
+            .delete();
 
         if (mounted) {
           // Show success dialog first, then pop the page
           await AppModalDialog.success(
             context: context,
             title: 'Store Deleted',
-            message: 'The store and all related data have been deleted.',
+            message: 'The store has been deleted.',
           );
           if (mounted) {
             Navigator.pop(context);
