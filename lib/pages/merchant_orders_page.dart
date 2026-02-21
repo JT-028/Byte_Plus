@@ -2,10 +2,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
+import '../services/thermal_printer_service.dart';
 import '../widgets/app_modal_dialog.dart';
+import 'printer_settings_page.dart';
 
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
@@ -18,6 +22,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   int tabIndex = 0;
   String? storeName;
   String? storeLogo;
+  final ThermalPrinterService _printerService = ThermalPrinterService();
 
   String get merchantUid => FirebaseAuth.instance.currentUser!.uid;
 
@@ -133,6 +138,30 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               ),
             ),
           ),
+          // Printer settings button
+          StreamBuilder<PrinterStatus>(
+            stream: _printerService.statusStream,
+            initialData: _printerService.status,
+            builder: (context, snapshot) {
+              final isConnected = snapshot.data == PrinterStatus.connected;
+              return IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrinterSettingsPage(),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Iconsax.printer,
+                  color: isConnected ? Colors.greenAccent : Colors.white,
+                ),
+                tooltip: 'Printer Settings',
+              );
+            },
+          ),
+          const SizedBox(width: 8),
           // Store logo
           Container(
             width: 48,
@@ -404,7 +433,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           const SizedBox(height: 16),
 
           // Items list
-          ...items.map((item) => _itemRow(item, total, isDark)).toList(),
+          ...items.map((item) => _itemRow(item, total, isDark)),
 
           // Note
           if (note.isNotEmpty) ...[
@@ -434,6 +463,20 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           ],
 
           const SizedBox(height: 16),
+
+          // Print receipt button
+          _printButton(
+            storeId: storeId,
+            orderId: orderId,
+            pickupNumber: pickupNumber,
+            items: items,
+            total: total,
+            note: note,
+            pickupNow: pickupNow,
+            formattedTime: formattedTime,
+            isDark: isDark,
+          ),
+          const SizedBox(height: 12),
 
           // Actions
           _actionsRow(
@@ -530,39 +573,37 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           ),
           if (variations.isNotEmpty) ...[
             const SizedBox(height: 4),
-            ...variations
-                .map(
-                  (v) => Padding(
-                    padding: const EdgeInsets.only(left: 8, top: 2),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color:
-                                isDark
-                                    ? AppColors.textTertiaryDark
-                                    : Colors.grey.shade400,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          v,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color:
-                                isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
+            ...variations.map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(left: 8, top: 2),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color:
+                            isDark
+                                ? AppColors.textTertiaryDark
+                                : Colors.grey.shade400,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                )
-                .toList(),
+                    const SizedBox(width: 8),
+                    Text(
+                      v,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ],
       ),
@@ -675,6 +716,254 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
     // Completed and Canceled: no actions
     return const SizedBox.shrink();
+  }
+
+  Widget _printButton({
+    required String storeId,
+    required String orderId,
+    required String pickupNumber,
+    required List<dynamic> items,
+    required double total,
+    required String note,
+    required bool pickupNow,
+    required String? formattedTime,
+    required bool isDark,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed:
+            () => _handlePrintReceipt(
+              storeId: storeId,
+              orderId: orderId,
+              pickupNumber: pickupNumber,
+              items: items,
+              total: total,
+              note: note,
+              pickupTime: pickupNow ? 'Now' : formattedTime,
+            ),
+        icon: Icon(
+          Iconsax.printer,
+          size: 18,
+          color:
+              _printerService.status == PrinterStatus.connected
+                  ? AppColors.primary
+                  : AppColors.textSecondary,
+        ),
+        label: Text(
+          _printerService.status == PrinterStatus.connected
+              ? 'Print Receipt'
+              : 'Connect Printer to Print',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color:
+                _printerService.status == PrinterStatus.connected
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color:
+                _printerService.status == PrinterStatus.connected
+                    ? AppColors.primary
+                    : (isDark ? AppColors.borderDark : AppColors.border),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handlePrintReceipt({
+    required String storeId,
+    required String orderId,
+    required String pickupNumber,
+    required List<dynamic> items,
+    required double total,
+    required String note,
+    String? pickupTime,
+  }) async {
+    // Check if printer is connected
+    if (_printerService.status != PrinterStatus.connected) {
+      final goToSettings = await AppModalDialog.confirm(
+        context: context,
+        title: 'Printer Not Connected',
+        message: 'Would you like to connect to a printer?',
+        confirmLabel: 'Settings',
+        cancelLabel: 'Cancel',
+      );
+
+      if (goToSettings == true && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PrinterSettingsPage()),
+        );
+      }
+      return;
+    }
+
+    // Show printing dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _buildPrintingDialog(),
+    );
+
+    try {
+      // Build receipt items
+      final receiptItems =
+          items.map((item) {
+            final itemData = item as Map<String, dynamic>;
+            final name = itemData['name']?.toString() ?? 'Item';
+            final qty = (itemData['qty'] as num?)?.toInt() ?? 1;
+            final price = (itemData['price'] as num?)?.toDouble() ?? 0;
+
+            // Get variations
+            String? variations;
+            if (itemData['selectedVariation'] != null) {
+              final v = itemData['selectedVariation'] as Map<String, dynamic>;
+              variations = v['name']?.toString();
+            }
+
+            // Get choice groups
+            String? choiceGroups;
+            if (itemData['selectedChoices'] is List) {
+              final choices = itemData['selectedChoices'] as List;
+              final choiceNames =
+                  choices
+                      .map((c) {
+                        if (c is Map<String, dynamic>) {
+                          return c['name']?.toString() ?? '';
+                        }
+                        return '';
+                      })
+                      .where((s) => s.isNotEmpty)
+                      .toList();
+              if (choiceNames.isNotEmpty) {
+                choiceGroups = choiceNames.join(', ');
+              }
+            }
+
+            return ReceiptItem(
+              name: name,
+              quantity: qty,
+              price: price * qty,
+              variations: variations,
+              choiceGroups: choiceGroups,
+            );
+          }).toList();
+
+      // Calculate subtotal
+      final subtotal = receiptItems.fold<double>(
+        0.0,
+        (sum, item) => sum + item.price,
+      );
+
+      // Build receipt
+      final receipt = ReceiptData(
+        storeName: storeName ?? 'BytePlus Store',
+        orderNumber: pickupNumber,
+        dateTime: DateFormat('MMM dd, yyyy hh:mm a').format(DateTime.now()),
+        pickupTime: pickupTime,
+        items: receiptItems,
+        subtotal: subtotal,
+        total: total,
+        note: note.isNotEmpty ? note : null,
+      );
+
+      // Print receipt
+      final success = await _printerService.printReceipt(receipt);
+
+      // Close printing dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        if (success) {
+          AppModalDialog.success(
+            context: context,
+            title: 'Receipt Printed',
+            message:
+                'Order $pickupNumber receipt has been printed successfully.',
+          );
+        } else {
+          AppModalDialog.error(
+            context: context,
+            title: 'Print Failed',
+            message:
+                'Could not print receipt. Please check printer connection.',
+          );
+        }
+      }
+    } catch (e) {
+      // Close printing dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        AppModalDialog.error(
+          context: context,
+          title: 'Print Error',
+          message: 'An error occurred while printing: $e',
+        );
+      }
+    }
+  }
+
+  Widget _buildPrintingDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return PopScope(
+      canPop: false,
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Printing Receipt...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // Action handlers

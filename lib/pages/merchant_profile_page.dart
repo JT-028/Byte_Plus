@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../theme/app_theme.dart';
 import '../services/theme_service.dart';
+import '../services/thermal_printer_service.dart';
 import '../widgets/app_modal_dialog.dart';
 import 'login_page.dart';
+import 'printer_settings_page.dart';
 
 class MerchantProfilePage extends StatelessWidget {
   const MerchantProfilePage({super.key});
@@ -119,6 +122,104 @@ class MerchantProfilePage extends StatelessWidget {
                       },
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Printer Settings
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrinterSettingsPage(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        isDark
+                            ? AppColors.surfaceDark
+                            : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      StreamBuilder<PrinterStatus>(
+                        stream: ThermalPrinterService().statusStream,
+                        initialData: ThermalPrinterService().status,
+                        builder: (context, snapshot) {
+                          final isConnected =
+                              snapshot.data == PrinterStatus.connected;
+                          return Icon(
+                            Iconsax.printer,
+                            color:
+                                isConnected
+                                    ? AppColors.success
+                                    : (isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Printer Settings",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
+                            ),
+                            StreamBuilder<PrinterStatus>(
+                              stream: ThermalPrinterService().statusStream,
+                              initialData: ThermalPrinterService().status,
+                              builder: (context, snapshot) {
+                                final isConnected =
+                                    snapshot.data == PrinterStatus.connected;
+                                final printer =
+                                    ThermalPrinterService().connectedPrinter;
+                                return Text(
+                                  isConnected
+                                      ? 'Connected: ${printer?.name ?? "Printer"}'
+                                      : 'Not connected',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isDark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Iconsax.arrow_right_3,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ),
 

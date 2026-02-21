@@ -825,7 +825,7 @@ class _AssignStoreSheetState extends State<_AssignStoreSheet> {
                         data['name'] ?? s.id,
                         widget.isDark,
                       );
-                    }).toList(),
+                    }),
                   ],
                 );
               },

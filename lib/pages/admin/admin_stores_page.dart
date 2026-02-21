@@ -533,7 +533,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                                       : AppColors.textPrimary,
                             ),
                           ),
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                           contentPadding: EdgeInsets.zero,
                         ),
                         const SizedBox(height: 20),

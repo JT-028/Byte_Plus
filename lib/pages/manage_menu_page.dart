@@ -334,7 +334,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                       catProducts,
                       isDark,
                     );
-                  }).toList(),
+                  }),
 
                   // Uncategorized section
                   if (uncategorized.isNotEmpty)
@@ -809,7 +809,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              value: selectedCategory,
+                              initialValue: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -822,20 +822,16 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                   value: null,
                                   child: Text('No Category'),
                                 ),
-                                ...cats
-                                    .map((c) {
-                                      final data =
-                                          c.data() as Map<String, dynamic>?;
-                                      if (data == null) return null;
-                                      final name =
-                                          data['name']?.toString() ?? '';
-                                      return DropdownMenuItem(
-                                        value: name,
-                                        child: Text(name),
-                                      );
-                                    })
-                                    .whereType<DropdownMenuItem<String>>()
-                                    .toList(),
+                                ...cats.map((c) {
+                                  final data =
+                                      c.data() as Map<String, dynamic>?;
+                                  if (data == null) return null;
+                                  final name = data['name']?.toString() ?? '';
+                                  return DropdownMenuItem(
+                                    value: name,
+                                    child: Text(name),
+                                  );
+                                }).whereType<DropdownMenuItem<String>>(),
                               ],
                               onChanged:
                                   (val) => setSheetState(
@@ -966,8 +962,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                 await Future.delayed(
                                   const Duration(milliseconds: 50),
                                 );
-                                if (mounted)
+                                if (mounted) {
                                   Navigator.pop(context); // Dismiss loading
+                                }
                                 _deleteProduct(productId);
                               },
                             ),
@@ -1002,7 +999,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              value: selectedCategory,
+                              initialValue: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -1015,20 +1012,16 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                   value: null,
                                   child: Text('No Category'),
                                 ),
-                                ...cats
-                                    .map((c) {
-                                      final data =
-                                          c.data() as Map<String, dynamic>?;
-                                      if (data == null) return null;
-                                      final name =
-                                          data['name']?.toString() ?? '';
-                                      return DropdownMenuItem(
-                                        value: name,
-                                        child: Text(name),
-                                      );
-                                    })
-                                    .whereType<DropdownMenuItem<String>>()
-                                    .toList(),
+                                ...cats.map((c) {
+                                  final data =
+                                      c.data() as Map<String, dynamic>?;
+                                  if (data == null) return null;
+                                  final name = data['name']?.toString() ?? '';
+                                  return DropdownMenuItem(
+                                    value: name,
+                                    child: Text(name),
+                                  );
+                                }).whereType<DropdownMenuItem<String>>(),
                               ],
                               onChanged:
                                   (val) => setSheetState(
@@ -1264,7 +1257,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                               ],
                             ),
                           );
-                        }).toList(),
+                        }),
                         const SizedBox(height: 8),
                         GestureDetector(
                           onTap:
@@ -1608,7 +1601,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                               ],
                             ),
                           );
-                        }).toList(),
+                        }),
                         const SizedBox(height: 8),
                         GestureDetector(
                           onTap:

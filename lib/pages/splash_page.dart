@@ -118,8 +118,8 @@ class _SplashPageState extends State<SplashPage>
       // Wrap with LocationGuard (mock mode enabled for testing)
       destination = LocationGuard(
         useMock: true,
-        mockLat: 14.5995, // Manila area coordinates for testing
-        mockLng: 120.9842,
+        mockLat: 15.158503947241618, // School center coordinates for testing
+        mockLng: 120.59252284294321,
         child: destination,
       );
 
