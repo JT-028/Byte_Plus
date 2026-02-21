@@ -600,42 +600,36 @@ class _UserShellState extends State<UserShell> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -2),
           ),
         ],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _navItem(
-            icon: Iconsax.home_2,
-            activeIcon: Iconsax.home_2,
-            label: "Home",
+            icon: Icons.restaurant_outlined,
+            activeIcon: Icons.restaurant,
             index: 0,
             isDark: isDark,
           ),
           _navItem(
-            icon: Iconsax.shopping_cart,
-            activeIcon: Iconsax.shopping_cart,
-            label: "Cart",
+            icon: Icons.shopping_basket_outlined,
+            activeIcon: Icons.shopping_basket,
             index: 1,
             isDark: isDark,
           ),
           _navItem(
-            icon: Iconsax.receipt_2,
-            activeIcon: Iconsax.receipt_2,
-            label: "Orders",
+            icon: Icons.receipt_long_outlined,
+            activeIcon: Icons.receipt_long,
             index: 2,
             isDark: isDark,
           ),
           _navItem(
-            icon: Iconsax.user,
-            activeIcon: Iconsax.user,
-            label: "Profile",
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
             index: 3,
             isDark: isDark,
           ),
@@ -647,49 +641,31 @@ class _UserShellState extends State<UserShell> {
   Widget _navItem({
     required IconData icon,
     required IconData activeIcon,
-    required String label,
     required int index,
     required bool isDark,
   }) {
     bool active = selectedNav == index;
     return GestureDetector(
       onTap: () => setState(() => selectedNav = index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Container(
+        width: 50,
+        height: 50,
         decoration: BoxDecoration(
           color:
               active
-                  ? (isDark
-                      ? AppColors.primaryLight.withOpacity(0.2)
-                      : AppColors.primary.withOpacity(0.1))
+                  ? (isDark ? AppColors.primaryLight : AppColors.primary)
                   : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              active ? activeIcon : icon,
-              size: 24,
-              color:
-                  active
-                      ? (isDark ? AppColors.primaryLight : AppColors.primary)
-                      : (isDark ? AppColors.textTertiaryDark : Colors.grey),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color:
-                    active
-                        ? (isDark ? AppColors.primaryLight : AppColors.primary)
-                        : (isDark ? AppColors.textTertiaryDark : Colors.grey),
-              ),
-            ),
-          ],
+        child: Icon(
+          active ? activeIcon : icon,
+          size: 26,
+          color:
+              active
+                  ? Colors.white
+                  : (isDark
+                      ? AppColors.textTertiaryDark
+                      : Colors.grey.shade600),
         ),
       ),
     );

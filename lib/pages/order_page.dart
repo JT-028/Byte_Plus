@@ -50,16 +50,25 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   // -------------------------------------------------------------
-  // TOP TAB BAR (Active / History)
+  // TOP TAB BAR (Active Orders / Past Orders)
   // -------------------------------------------------------------
   Widget _tabBar(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _tabButton("Active", 0, isDark),
-        const SizedBox(width: 18),
-        _tabButton("History", 1, isDark),
-      ],
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _tabButton("Active Orders", 0, isDark)),
+          Expanded(child: _tabButton("Past Orders", 1, isDark)),
+        ],
+      ),
     );
   }
 
@@ -68,26 +77,31 @@ class _OrdersPageState extends State<OrdersPage> {
     return GestureDetector(
       onTap: () => setState(() => tabIndex = index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color:
-              active
-                  ? (isDark ? AppColors.primaryLight : AppColors.primary)
-                  : (isDark
-                      ? AppColors.surfaceVariantDark
-                      : Colors.grey.shade200),
-          borderRadius: BorderRadius.circular(20),
+          border: Border(
+            bottom: BorderSide(
+              color:
+                  active
+                      ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                      : Colors.transparent,
+              width: 3,
+            ),
+          ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color:
-                active
-                    ? Colors.white
-                    : (isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimary),
-            fontWeight: FontWeight.w600,
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              color:
+                  active
+                      ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                      : (isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary),
+              fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            ),
           ),
         ),
       ),
@@ -173,95 +187,218 @@ class _OrdersPageState extends State<OrdersPage> {
   }
 
   // -------------------------------------------------------------
-  // ORDER CARD SUMMARY
+  // ORDER CARD SUMMARY - Matching UI Design
   // -------------------------------------------------------------
   Widget _orderCard(Map<String, dynamic> data, bool isDark) {
-    final storeName = data["storeName"];
-    final total = data["total"];
-    final status = data["status"];
-    final items = List<Map<String, dynamic>>.from(data["items"]);
+    final storeName = data["storeName"] ?? '';
+    final total = data["total"] ?? 0;
+    final status = data["status"] ?? '';
+    final orderId = data["orderId"] ?? '';
+    final pickupTime = data["pickupTime"];
+
+    // Generate short pickup number from orderId (last 3-4 chars uppercase)
+    final pickupNumber =
+        orderId.length > 3
+            ? orderId.substring(orderId.length - 3).toUpperCase()
+            : orderId.toUpperCase();
+
+    final isReady = status == "ready";
+
+    // Color scheme matching the design
+    final primaryBlue = const Color(0xFF3D3D8E);
+    final lightBlueBg = const Color(0xFFEEEEFC);
 
     return GestureDetector(
       onTap: () => _openOrderDetails(data, isDark),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : Colors.grey.shade300,
-          ),
+          borderRadius: BorderRadius.circular(16),
           boxShadow:
               isDark
                   ? []
                   : [
                     BoxShadow(
                       color: Colors.grey.shade200,
-                      blurRadius: 4,
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ],
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.receipt_long,
-              size: 36,
-              color: isDark ? AppColors.primaryLight : AppColors.primary,
-            ),
-            const SizedBox(width: 14),
-
-            Expanded(
+            // Main card content
+            Padding(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    storeName ?? '',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                  // Row 1: Store name + Status badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Store name and order number column
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              storeName,
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color:
+                                    isDark
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Order #$pickupNumber",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color:
+                                    isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      _statusBadge(status),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Pickup time pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
                       color:
-                          isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
+                          isDark ? AppColors.surfaceVariantDark : lightBlueBg,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 18,
+                          color: isDark ? AppColors.primaryLight : primaryBlue,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            isReady
+                                ? "Ready for pickup"
+                                : "Estimated pickup time",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color:
+                                  isDark
+                                      ? AppColors.textSecondaryDark
+                                      : Colors.grey.shade600,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          pickupTime ?? "TBD",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 16),
 
-                  Text(
-                    "${items.length} item(s)",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color:
-                          isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondary,
-                    ),
+                  // Total row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Total",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        "₱ ${total.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _statusBadge(status),
-                const SizedBox(height: 6),
-                Text(
-                  "₱ $total",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
+            // Pickup Number Banner (only for ready orders)
+            if (isReady) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceVariantDark : lightBlueBg,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
                   ),
                 ),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    Text(
+                      "Your Pickup No:",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color:
+                            isDark
+                                ? AppColors.textSecondaryDark
+                                : Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      pickupNumber,
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppColors.primaryLight : primaryBlue,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -276,10 +413,16 @@ class _OrdersPageState extends State<OrdersPage> {
     Color textColor;
     String label;
 
+    // Colors matching the design
+    const primaryBlue = Color(0xFF3D3D8E);
+    const lightBlueBg = Color(0xFFEEEEFC);
+    const successGreen = Color(0xFF2E7D5A);
+    const lightGreenBg = Color(0xFFE8F5EE);
+
     switch (status) {
       case "to-do":
-        bg = AppColors.warningLight;
-        textColor = AppColors.warning;
+        bg = lightBlueBg;
+        textColor = primaryBlue;
         label = "Preparing";
         break;
       case "in-progress":
@@ -288,9 +431,9 @@ class _OrdersPageState extends State<OrdersPage> {
         label = "In Progress";
         break;
       case "ready":
-        bg = AppColors.successLight;
-        textColor = AppColors.success;
-        label = "Ready";
+        bg = lightGreenBg;
+        textColor = successGreen;
+        label = "Ready for Pickup";
         break;
       case "done":
         bg = AppColors.success;
