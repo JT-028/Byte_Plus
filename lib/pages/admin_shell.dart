@@ -39,10 +39,7 @@ class _AdminShellState extends State<AdminShell> {
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       appBar: _buildAppBar(isDark),
       drawer: _buildDrawer(isDark),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: _buildBottomNav(isDark),
     );
   }
@@ -77,21 +74,23 @@ class _AdminShellState extends State<AdminShell> {
         ],
       ),
       leading: Builder(
-        builder: (context) => IconButton(
-          icon: Icon(
-            Iconsax.menu_1,
-            color: isDark ? AppColors.textPrimaryDark : Colors.white,
-          ),
-          onPressed: () => Scaffold.of(context).openDrawer(),
-        ),
+        builder:
+            (context) => IconButton(
+              icon: Icon(
+                Iconsax.menu_1,
+                color: isDark ? AppColors.textPrimaryDark : Colors.white,
+              ),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
       ),
       actions: [
         // Pending requests badge
         StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('passwordRequests')
-              .where('status', isEqualTo: 'pending')
-              .snapshots(),
+          stream:
+              FirebaseFirestore.instance
+                  .collection('passwordRequests')
+                  .where('status', isEqualTo: 'pending')
+                  .snapshots(),
           builder: (context, snap) {
             final count = snap.data?.docs.length ?? 0;
             return Stack(
@@ -139,10 +138,11 @@ class _AdminShellState extends State<AdminShell> {
           children: [
             // Profile header
             FutureBuilder<DocumentSnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(_user.uid)
-                  .get(),
+              future:
+                  FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(_user.uid)
+                      .get(),
               builder: (context, snap) {
                 final data = snap.data?.data() as Map<String, dynamic>? ?? {};
                 return Container(
@@ -188,7 +188,10 @@ class _AdminShellState extends State<AdminShell> {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(6),
@@ -245,7 +248,10 @@ class _AdminShellState extends State<AdminShell> {
               leading: const Icon(Iconsax.logout, color: AppColors.error),
               title: const Text(
                 'Logout',
-                style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               onTap: _logout,
             ),
@@ -270,16 +276,20 @@ class _AdminShellState extends State<AdminShell> {
         children: [
           Icon(
             icon,
-            color: isSelected
-                ? AppColors.primary
-                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondary),
+            color:
+                isSelected
+                    ? AppColors.primary
+                    : (isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary),
           ),
           if (showBadge)
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('passwordRequests')
-                  .where('status', isEqualTo: 'pending')
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('passwordRequests')
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
               builder: (context, snap) {
                 final count = snap.data?.docs.length ?? 0;
                 if (count == 0) return const SizedBox.shrink();
@@ -309,9 +319,12 @@ class _AdminShellState extends State<AdminShell> {
       title: Text(
         label,
         style: TextStyle(
-          color: isSelected
-              ? AppColors.primary
-              : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+          color:
+              isSelected
+                  ? AppColors.primary
+                  : (isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary),
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         ),
       ),
@@ -319,12 +332,9 @@ class _AdminShellState extends State<AdminShell> {
         setState(() => _selectedIndex = index);
         Navigator.pop(context);
       },
-      tileColor: isSelected
-          ? AppColors.primary.withOpacity(0.1)
-          : Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      tileColor:
+          isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -365,7 +375,10 @@ class _AdminShellState extends State<AdminShell> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color:
+              isSelected
+                  ? AppColors.primary.withOpacity(0.1)
+                  : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -373,9 +386,12 @@ class _AdminShellState extends State<AdminShell> {
           children: [
             Icon(
               icon,
-              color: isSelected
-                  ? AppColors.primary
-                  : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+              color:
+                  isSelected
+                      ? AppColors.primary
+                      : (isDark
+                          ? AppColors.textTertiaryDark
+                          : AppColors.textTertiary),
               size: 22,
             ),
             const SizedBox(height: 4),
@@ -384,9 +400,12 @@ class _AdminShellState extends State<AdminShell> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.primary
-                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                color:
+                    isSelected
+                        ? AppColors.primary
+                        : (isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary),
               ),
             ),
           ],
@@ -395,7 +414,12 @@ class _AdminShellState extends State<AdminShell> {
     );
   }
 
-  Widget _navItemWithBadge(IconData icon, String label, int index, bool isDark) {
+  Widget _navItemWithBadge(
+    IconData icon,
+    String label,
+    int index,
+    bool isDark,
+  ) {
     final isSelected = _selectedIndex == index;
 
     return GestureDetector(
@@ -403,7 +427,10 @@ class _AdminShellState extends State<AdminShell> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color:
+              isSelected
+                  ? AppColors.primary.withOpacity(0.1)
+                  : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -414,16 +441,20 @@ class _AdminShellState extends State<AdminShell> {
               children: [
                 Icon(
                   icon,
-                  color: isSelected
-                      ? AppColors.primary
-                      : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                  color:
+                      isSelected
+                          ? AppColors.primary
+                          : (isDark
+                              ? AppColors.textTertiaryDark
+                              : AppColors.textTertiary),
                   size: 22,
                 ),
                 StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('passwordRequests')
-                      .where('status', isEqualTo: 'pending')
-                      .snapshots(),
+                  stream:
+                      FirebaseFirestore.instance
+                          .collection('passwordRequests')
+                          .where('status', isEqualTo: 'pending')
+                          .snapshots(),
                   builder: (context, snap) {
                     final count = snap.data?.docs.length ?? 0;
                     if (count == 0) return const SizedBox.shrink();
@@ -456,9 +487,12 @@ class _AdminShellState extends State<AdminShell> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.primary
-                    : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                color:
+                    isSelected
+                        ? AppColors.primary
+                        : (isDark
+                            ? AppColors.textTertiaryDark
+                            : AppColors.textTertiary),
               ),
             ),
           ],
@@ -468,6 +502,7 @@ class _AdminShellState extends State<AdminShell> {
   }
 
   Future<void> _logout() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Logout?',
@@ -477,6 +512,72 @@ class _AdminShellState extends State<AdminShell> {
     );
 
     if (ok == true) {
+      // Show loading overlay with animation
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black87,
+        builder:
+            (context) => PopScope(
+              canPop: false,
+              child: Center(
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 28,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3.5,
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Logging out',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                            decoration: TextDecoration.none,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+      );
+
+      // Wait a bit for visual feedback
+      await Future.delayed(const Duration(milliseconds: 800));
+
       await _auth.signOut();
       if (!mounted) return;
       Navigator.pushReplacement(

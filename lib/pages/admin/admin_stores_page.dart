@@ -5,6 +5,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../../theme/app_theme.dart';
 import '../../widgets/app_modal_dialog.dart';
+import '../../utils/populate_stores_menu.dart';
 
 class AdminStoresPage extends StatefulWidget {
   const AdminStoresPage({super.key});
@@ -21,7 +22,12 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddStoreDialog(isDark),
+        onPressed: () async {
+          _showLoadingOverlay();
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (mounted) Navigator.pop(context); // Dismiss loading
+          _showAddStoreDialog(isDark);
+        },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Add Store', style: TextStyle(color: Colors.white)),
@@ -38,13 +44,34 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
   Widget _header(bool isDark) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Text(
-        'Manage Stores',
-        style: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.w700,
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Manage Stores',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+            ),
+          ),
+          // Populate Menu Button
+          OutlinedButton.icon(
+            onPressed: () => _populateStoreMenus(),
+            icon: const Icon(Iconsax.import_2, size: 18),
+            label: const Text('Populate Menus'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -260,7 +287,12 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                 // Actions
                 IconButton(
                   icon: Icon(Iconsax.edit, size: 18, color: AppColors.primary),
-                  onPressed: () => _showEditStoreDialog(doc.id, data, isDark),
+                  onPressed: () async {
+                    _showLoadingOverlay();
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    if (mounted) Navigator.pop(context); // Dismiss loading
+                    _showEditStoreDialog(doc.id, data, isDark);
+                  },
                 ),
                 IconButton(
                   icon: Icon(
@@ -268,11 +300,21 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                     size: 18,
                     color: AppColors.warning,
                   ),
-                  onPressed: () => _showGeofenceDialog(doc.id, data, isDark),
+                  onPressed: () async {
+                    _showLoadingOverlay();
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    if (mounted) Navigator.pop(context); // Dismiss loading
+                    _showGeofenceDialog(doc.id, data, isDark);
+                  },
                 ),
                 IconButton(
                   icon: Icon(Iconsax.trash, size: 18, color: AppColors.error),
-                  onPressed: () => _deleteStore(doc.id, name),
+                  onPressed: () async {
+                    _showLoadingOverlay();
+                    await Future.delayed(const Duration(milliseconds: 50));
+                    if (mounted) Navigator.pop(context); // Dismiss loading
+                    _deleteStore(doc.id, name);
+                  },
                 ),
               ],
             ),
@@ -295,10 +337,21 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     );
   }
 
+  /// Show a loading overlay to prevent multiple clicks
+  void _showLoadingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
   void _showAddStoreDialog(bool isDark) {
     final nameController = TextEditingController();
     final descController = TextEditingController();
     final logoController = TextEditingController();
+    final pageContext = context; // Store page context
 
     showModalBottomSheet(
       context: context,
@@ -308,12 +361,12 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder:
-          (context) => Padding(
+          (sheetContext) => Padding(
             padding: EdgeInsets.fromLTRB(
               20,
               20,
               20,
-              MediaQuery.of(context).viewInsets.bottom + 20,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 20,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -352,12 +405,12 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                   const SizedBox(height: 24),
                   _actionButtons(
                     isDark: isDark,
-                    onCancel: () => Navigator.pop(context),
+                    onCancel: () => Navigator.pop(sheetContext),
                     onConfirm: () async {
                       final name = nameController.text.trim();
                       if (name.isEmpty) {
                         await AppModalDialog.warning(
-                          context: context,
+                          context: sheetContext,
                           title: 'Missing Information',
                           message: 'Store name is required.',
                         );
@@ -375,9 +428,10 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                           });
 
                       if (mounted) {
-                        Navigator.pop(context);
+                        Navigator.pop(sheetContext);
                         await AppModalDialog.success(
-                          context: context,
+                          context:
+                              pageContext, // Use page context, not sheet context
                           title: 'Store Created',
                           message: 'The store has been created.',
                         );
@@ -407,6 +461,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
       text: data['logoUrl']?.toString() ?? '',
     );
     bool isActive = data['isActive'] ?? true;
+    final pageContext = context; // Store page context
 
     showModalBottomSheet(
       context: context,
@@ -416,7 +471,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder:
-          (context) => StatefulBuilder(
+          (sheetContext) => StatefulBuilder(
             builder:
                 (context, setSheetState) => Padding(
                   padding: EdgeInsets.fromLTRB(
@@ -510,7 +565,8 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                             if (mounted) {
                               Navigator.pop(context);
                               await AppModalDialog.success(
-                                context: context,
+                                context:
+                                    pageContext, // Use page context, not sheet context
                                 title: 'Store Updated',
                                 message: 'The store has been updated.',
                               );
@@ -802,5 +858,232 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
         ),
       ],
     );
+  }
+
+  Future<void> _populateStoreMenus() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              'Populate Store Menus',
+              style: TextStyle(
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              'This will add all products from the pricelist to Angelina Store and POTATO CORNER. Existing products will not be duplicated.\n\nContinue?',
+              style: TextStyle(
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Populate'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => PopScope(
+            canPop: false,
+            child: Center(
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.surfaceDark : AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 4,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Populating menus',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                          decoration: TextDecoration.none,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+    );
+
+    try {
+      // Call the population script
+      await StoreMenuPopulator.populateAll();
+
+      // Close loading overlay
+      if (mounted) Navigator.pop(context);
+
+      // Show success dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              backgroundColor:
+                  isDark ? AppColors.surfaceDark : AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  const Icon(
+                    Iconsax.tick_circle,
+                    color: Colors.green,
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Success',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Store menus have been populated successfully. All products have been added with placeholder images.',
+                style: TextStyle(
+                  color:
+                      isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+    } catch (e) {
+      // Close loading overlay
+      if (mounted) Navigator.pop(context);
+
+      // Show error dialog
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              backgroundColor:
+                  isDark ? AppColors.surfaceDark : AppColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Row(
+                children: [
+                  const Icon(Iconsax.close_circle, color: Colors.red, size: 28),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Error',
+                    style: TextStyle(
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Failed to populate menus: $e',
+                style: TextStyle(
+                  color:
+                      isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+      );
+    }
   }
 }

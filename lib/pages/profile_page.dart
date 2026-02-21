@@ -250,10 +250,78 @@ class ProfilePage extends StatelessWidget {
 
             if (ok != true) return;
 
+            // Show loading overlay with animation
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              barrierColor: Colors.black87,
+              builder:
+                  (context) => PopScope(
+                    canPop: false,
+                    child: Center(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 28,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                isDark ? AppColors.surfaceDark : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 48,
+                                height: 48,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 3.5,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Logging out',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary,
+                                  decoration: TextDecoration.none,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+            );
+
+            // Wait a bit for visual feedback
+            await Future.delayed(const Duration(milliseconds: 800));
+
             await FirebaseAuth.instance.signOut();
             if (!context.mounted) return;
 
-            // Optional: force navigation to login to avoid any weird backstack
+            // Navigate to login (this will dismiss the loading overlay)
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginPage()),
               (route) => false,

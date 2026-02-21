@@ -1,4 +1,6 @@
 // lib/pages/manage_menu_page.dart
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -19,37 +21,56 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   String? storeId;
   bool storeIdLoaded = false;
   Set<String> expandedCategories = {};
+  StreamSubscription<DocumentSnapshot>? _userDocSubscription;
 
   @override
   void initState() {
     super.initState();
-    _loadStoreId();
+    _listenToStoreId();
   }
 
-  Future<void> _loadStoreId() async {
+  @override
+  void dispose() {
+    _userDocSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _listenToStoreId() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       setState(() => storeIdLoaded = true);
       return;
     }
 
-    try {
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    _userDocSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen(
+          (doc) {
+            if (!mounted) return;
 
-      if (userDoc.exists) {
-        final loadedStoreId = userDoc.data()?['storeId']?.toString();
-        setState(() {
-          storeId = (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
-          storeIdLoaded = true;
-        });
-      } else {
-        setState(() => storeIdLoaded = true);
-      }
-    } catch (e) {
-      setState(() => storeIdLoaded = true);
-      debugPrint('Error loading storeId: $e');
-    }
+            if (doc.exists) {
+              final loadedStoreId = doc.data()?['storeId']?.toString();
+              setState(() {
+                storeId =
+                    (loadedStoreId?.isNotEmpty == true) ? loadedStoreId : null;
+                storeIdLoaded = true;
+              });
+            } else {
+              setState(() {
+                storeId = null;
+                storeIdLoaded = true;
+              });
+            }
+          },
+          onError: (e) {
+            debugPrint('Error listening to storeId: $e');
+            if (mounted) {
+              setState(() => storeIdLoaded = true);
+            }
+          },
+        );
   }
 
   CollectionReference get menuCollection => FirebaseFirestore.instance
@@ -172,7 +193,10 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
 
   Widget _addNewDropdown(bool isDark) {
     return PopupMenuButton<String>(
-      onSelected: (value) {
+      onSelected: (value) async {
+        _showLoadingOverlay();
+        await Future.delayed(const Duration(milliseconds: 50));
+        if (mounted) Navigator.pop(context); // Dismiss loading
         switch (value) {
           case 'category':
             _showAddCategoryDialog(isDark);
@@ -580,7 +604,12 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
           const SizedBox(width: 8),
           // Edit button
           GestureDetector(
-            onTap: () => _showEditProductDialog(doc.id, data, isDark),
+            onTap: () async {
+              _showLoadingOverlay();
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (mounted) Navigator.pop(context); // Dismiss loading
+              _showEditProductDialog(doc.id, data, isDark);
+            },
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -612,11 +641,22 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     );
   }
 
+  /// Show a loading overlay to prevent multiple clicks
+  void _showLoadingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
   // ============================================
   // DIALOG: Add Category
   // ============================================
   void _showAddCategoryDialog(bool isDark) {
     final nameController = TextEditingController();
+    final pageContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -626,12 +666,12 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder:
-          (context) => Padding(
+          (sheetContext) => Padding(
             padding: EdgeInsets.fromLTRB(
               20,
               20,
               20,
-              MediaQuery.of(context).viewInsets.bottom + 20,
+              MediaQuery.of(sheetContext).viewInsets.bottom + 20,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -660,12 +700,12 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                 const SizedBox(height: 24),
                 _actionButtons(
                   isDark: isDark,
-                  onCancel: () => Navigator.pop(context),
+                  onCancel: () => Navigator.pop(sheetContext),
                   onConfirm: () async {
                     final name = nameController.text.trim();
                     if (name.isEmpty) {
                       await AppModalDialog.warning(
-                        context: context,
+                        context: sheetContext,
                         title: 'Missing Information',
                         message: 'Category name is required.',
                       );
@@ -678,9 +718,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                     });
 
                     if (mounted) {
-                      Navigator.pop(context);
+                      Navigator.pop(sheetContext);
                       await AppModalDialog.success(
-                        context: context,
+                        context: pageContext,
                         title: 'Category Added',
                         message: 'The category has been created.',
                       );
@@ -702,6 +742,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     final priceController = TextEditingController();
     final imageUrlController = TextEditingController();
     String? selectedCategory;
+    final pageContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -839,7 +880,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                             if (mounted) {
                               Navigator.pop(context);
                               await AppModalDialog.success(
-                                context: context,
+                                context: pageContext,
                                 title: 'Product Added',
                                 message:
                                     'The product has been added to the menu.',
@@ -875,6 +916,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     );
     String? selectedCategory =
         (existing['category'] as List?)?.firstOrNull?.toString();
+    final pageContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -919,7 +961,15 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                 Iconsax.trash,
                                 color: AppColors.error,
                               ),
-                              onPressed: () => _deleteProduct(productId),
+                              onPressed: () async {
+                                _showLoadingOverlay();
+                                await Future.delayed(
+                                  const Duration(milliseconds: 50),
+                                );
+                                if (mounted)
+                                  Navigator.pop(context); // Dismiss loading
+                                _deleteProduct(productId);
+                              },
                             ),
                           ],
                         ),
@@ -1021,7 +1071,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                             if (mounted) {
                               Navigator.pop(context);
                               await AppModalDialog.success(
-                                context: context,
+                                context: pageContext,
                                 title: 'Product Updated',
                                 message: 'The product has been updated.',
                               );
@@ -1045,6 +1095,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     final List<Map<String, TextEditingController>> options = [
       {'name': TextEditingController(), 'price': TextEditingController()},
     ];
+    final pageContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -1311,7 +1362,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                             if (mounted) {
                               Navigator.pop(context);
                               await AppModalDialog.success(
-                                context: context,
+                                context: pageContext,
                                 title: 'Variation Added',
                                 message: 'The variation has been created.',
                               );
@@ -1337,6 +1388,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     final List<Map<String, TextEditingController>> choices = [
       {'name': TextEditingController(), 'price': TextEditingController()},
     ];
+    final pageContext = context;
 
     showModalBottomSheet(
       context: context,
@@ -1656,7 +1708,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                             if (mounted) {
                               Navigator.pop(context);
                               await AppModalDialog.success(
-                                context: context,
+                                context: pageContext,
                                 title: 'Choice Group Added',
                                 message: 'The choice group has been created.',
                               );
@@ -1711,8 +1763,11 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                     icon: Iconsax.edit,
                     label: 'Rename Category',
                     isDark: isDark,
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      _showLoadingOverlay();
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (mounted) Navigator.pop(context); // Dismiss loading
                       _renameCategory(categoryId, categoryName, isDark);
                     },
                   ),
@@ -1722,8 +1777,11 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                     label: 'Delete Category',
                     isDark: isDark,
                     isDestructive: true,
-                    onTap: () {
+                    onTap: () async {
                       Navigator.pop(context);
+                      _showLoadingOverlay();
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (mounted) Navigator.pop(context); // Dismiss loading
                       _deleteCategory(categoryId, categoryName);
                     },
                   ),

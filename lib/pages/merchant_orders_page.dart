@@ -37,10 +37,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child: FutureBuilder<DocumentSnapshot>(
-          future: FirebaseFirestore.instance
-              .collection("users")
-              .doc(merchantUid)
-              .get(),
+          future:
+              FirebaseFirestore.instance
+                  .collection("users")
+                  .doc(merchantUid)
+                  .get(),
           builder: (context, userSnap) {
             if (userSnap.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -68,7 +69,8 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
   Widget _loadStoreAndBuildPage(String storeId, bool isDark) {
     return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection("stores").doc(storeId).get(),
+      future:
+          FirebaseFirestore.instance.collection("stores").doc(storeId).get(),
       builder: (context, storeSnap) {
         if (storeSnap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -117,9 +119,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   Widget _topHeader(bool isDark, String storeId) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-      ),
+      decoration: const BoxDecoration(color: AppColors.primary),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -143,13 +143,14 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: storeLogo != null && storeLogo!.isNotEmpty
-                  ? Image.network(
-                      storeLogo!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _defaultLogo(),
-                    )
-                  : _defaultLogo(),
+              child:
+                  storeLogo != null && storeLogo!.isNotEmpty
+                      ? Image.network(
+                        storeLogo!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _defaultLogo(),
+                      )
+                      : _defaultLogo(),
             ),
           ),
         ],
@@ -168,11 +169,12 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
   Widget _ordersTitle(String storeId, bool isDark) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("stores")
-          .doc(storeId)
-          .collection("orders")
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection("stores")
+              .doc(storeId)
+              .collection("orders")
+              .snapshots(),
       builder: (context, snap) {
         final count = snap.data?.docs.length ?? 0;
         return Padding(
@@ -182,7 +184,8 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
               children: [
                 const TextSpan(text: "Orders "),
@@ -220,9 +223,14 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                      color: active
-                          ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary)
-                          : (isDark ? AppColors.textTertiaryDark : AppColors.textTertiary),
+                      color:
+                          active
+                              ? (isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary)
+                              : (isDark
+                                  ? AppColors.textTertiaryDark
+                                  : AppColors.textTertiary),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -244,22 +252,24 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     final selectedStatus = tabs[tabIndex].status;
 
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection("stores")
-          .doc(storeId)
-          .collection("orders")
-          .orderBy("timestamp", descending: true)
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance
+              .collection("stores")
+              .doc(storeId)
+              .collection("orders")
+              .orderBy("timestamp", descending: true)
+              .snapshots(),
       builder: (context, snap) {
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
         final allDocs = snap.data!.docs;
-        final filtered = allDocs.where((d) {
-          final data = d.data() as Map<String, dynamic>;
-          return (data["status"] ?? "").toString() == selectedStatus;
-        }).toList();
+        final filtered =
+            allDocs.where((d) {
+              final data = d.data() as Map<String, dynamic>;
+              return (data["status"] ?? "").toString() == selectedStatus;
+            }).toList();
 
         if (allDocs.isEmpty) {
           return _emptyState("No Orders Yet", isDark);
@@ -306,7 +316,8 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
               ),
             ),
           ],
@@ -324,16 +335,18 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   }) {
     final status = (data["status"] ?? "").toString();
     final total = (data["total"] as num? ?? 0).toDouble();
-    final items = (data["items"] is List) ? (data["items"] as List) : <dynamic>[];
+    final items =
+        (data["items"] is List) ? (data["items"] as List) : <dynamic>[];
     final note = (data["note"] ?? "").toString();
-    
+
     // Pickup time
     final pickupNow = (data["pickupNow"] ?? true) == true;
     final pickupTime = data["pickupTime"];
     final formattedTime = pickupNow ? null : _formatPickupTime(pickupTime);
 
     // Generate pickup number from orderId (last 3 chars uppercase with A prefix)
-    final pickupNumber = "A${orderId.length > 2 ? orderId.substring(orderId.length - 2).toUpperCase() : orderId.toUpperCase()}";
+    final pickupNumber =
+        "A${orderId.length > 2 ? orderId.substring(orderId.length - 2).toUpperCase() : orderId.toUpperCase()}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -344,15 +357,16 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
         border: Border.all(
           color: isDark ? AppColors.borderDark : Colors.grey.shade200,
         ),
-        boxShadow: isDark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        boxShadow:
+            isDark
+                ? []
+                : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,7 +381,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                  color:
+                      isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
                 ),
               ),
               if (formattedTime != null || pickupNow)
@@ -375,7 +392,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   pickupNow ? "Pickup: Now" : "Pickup by: $formattedTime",
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                 ),
             ],
@@ -393,7 +413,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               "Note: $note",
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                color:
+                    isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
               ),
             ),
           ] else ...[
@@ -402,7 +425,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               "Note:",
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
+                color:
+                    isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiary,
               ),
             ),
           ],
@@ -412,10 +438,30 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           // Actions
           _actionsRow(
             status: status,
-            onAccept: () => _handleAccept(storeId, orderId, userId),
-            onReject: () => _handleReject(storeId, orderId, userId),
-            onMarkReady: () => _handleMarkReady(storeId, orderId, userId),
-            onPickedUp: () => _handlePickedUp(storeId, orderId, userId),
+            onAccept: () async {
+              _showLoadingOverlay();
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (mounted) Navigator.pop(context); // Dismiss loading
+              _handleAccept(storeId, orderId, userId);
+            },
+            onReject: () async {
+              _showLoadingOverlay();
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (mounted) Navigator.pop(context); // Dismiss loading
+              _handleReject(storeId, orderId, userId);
+            },
+            onMarkReady: () async {
+              _showLoadingOverlay();
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (mounted) Navigator.pop(context); // Dismiss loading
+              _handleMarkReady(storeId, orderId, userId);
+            },
+            onPickedUp: () async {
+              _showLoadingOverlay();
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (mounted) Navigator.pop(context); // Dismiss loading
+              _handlePickedUp(storeId, orderId, userId);
+            },
             isDark: isDark,
           ),
         ],
@@ -428,11 +474,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     final name = (itemMap["productName"] ?? "").toString();
     final qty = (itemMap["quantity"] as num? ?? 1).toInt();
     final lineTotal = (itemMap["lineTotal"] as num? ?? 0).toDouble();
-    
+
     // Get variations/customizations
     final selectedVariation = itemMap["selectedVariation"];
     final selectedChoices = itemMap["selectedChoices"];
-    
+
     List<String> variations = [];
     if (selectedVariation != null && selectedVariation is Map) {
       variations.add(selectedVariation["name"]?.toString() ?? "");
@@ -465,7 +511,10 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -481,32 +530,52 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           ),
           if (variations.isNotEmpty) ...[
             const SizedBox(height: 4),
-            ...variations.map((v) => Padding(
-              padding: const EdgeInsets.only(left: 8, top: 2),
-              child: Row(
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.textTertiaryDark : Colors.grey.shade400,
-                      shape: BoxShape.circle,
+            ...variations
+                .map(
+                  (v) => Padding(
+                    padding: const EdgeInsets.only(left: 8, top: 2),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : Colors.grey.shade400,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          v,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                isDark
+                                    ? AppColors.textTertiaryDark
+                                    : AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    v,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
+                )
+                .toList(),
           ],
         ],
       ),
+    );
+  }
+
+  /// Show a loading overlay to prevent multiple clicks
+  void _showLoadingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -578,10 +647,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           ),
           child: const Text(
             "Mark as Ready",
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
         ),
       );
@@ -601,10 +667,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
           ),
           child: const Text(
             "Picked Up",
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
         ),
       );
@@ -615,7 +678,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   }
 
   // Action handlers
-  Future<void> _handleAccept(String storeId, String orderId, String userId) async {
+  Future<void> _handleAccept(
+    String storeId,
+    String orderId,
+    String userId,
+  ) async {
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Accept Order?',
@@ -645,7 +712,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     }
   }
 
-  Future<void> _handleReject(String storeId, String orderId, String userId) async {
+  Future<void> _handleReject(
+    String storeId,
+    String orderId,
+    String userId,
+  ) async {
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Reject Order?',
@@ -677,16 +748,17 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     }
   }
 
-  Future<void> _handleMarkReady(String storeId, String orderId, String userId) async {
+  Future<void> _handleMarkReady(
+    String storeId,
+    String orderId,
+    String userId,
+  ) async {
     await _updateOrderStatusEverywhere(
       storeId: storeId,
       orderId: orderId,
       userId: userId,
       newStatus: "ready",
-      extra: {
-        "readyAt": FieldValue.serverTimestamp(),
-        "readyBy": merchantUid,
-      },
+      extra: {"readyAt": FieldValue.serverTimestamp(), "readyBy": merchantUid},
     );
 
     if (!mounted) return;
@@ -697,7 +769,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     );
   }
 
-  Future<void> _handlePickedUp(String storeId, String orderId, String userId) async {
+  Future<void> _handlePickedUp(
+    String storeId,
+    String orderId,
+    String userId,
+  ) async {
     await _updateOrderStatusEverywhere(
       storeId: storeId,
       orderId: orderId,

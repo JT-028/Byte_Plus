@@ -28,7 +28,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateUserDialog(isDark),
+        onPressed: () async {
+          _showLoadingOverlay();
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (mounted) Navigator.pop(context); // Dismiss loading
+          _showCreateUserDialog(isDark);
+        },
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Iconsax.user_add),
@@ -345,14 +350,23 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               borderRadius: BorderRadius.circular(12),
             ),
             color: isDark ? AppColors.surfaceDark : Colors.white,
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value.startsWith('role_')) {
                 _changeRole(doc.id, value.substring(5));
               } else if (value == 'assign_store') {
+                _showLoadingOverlay();
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (mounted) Navigator.pop(context); // Dismiss loading
                 _showAssignStoreDialog(doc.id, storeId, isDark);
               } else if (value == 'edit_user') {
+                _showLoadingOverlay();
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (mounted) Navigator.pop(context); // Dismiss loading
                 _showEditUserDialog(doc.id, name, email, role, isDark);
               } else if (value == 'delete_user') {
+                _showLoadingOverlay();
+                await Future.delayed(const Duration(milliseconds: 50));
+                if (mounted) Navigator.pop(context); // Dismiss loading
                 _deleteUser(doc.id, name);
               }
             },
@@ -452,6 +466,16 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Show a loading overlay to prevent multiple clicks
+  void _showLoadingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
   }
 

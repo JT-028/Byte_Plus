@@ -384,7 +384,12 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _rejectRequest(doc.id),
+                    onPressed: () async {
+                      _showLoadingOverlay();
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (mounted) Navigator.pop(context); // Dismiss loading
+                      _rejectRequest(doc.id);
+                    },
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.error),
                       shape: RoundedRectangleBorder(
@@ -404,7 +409,12 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => _approveRequest(doc.id, email),
+                    onPressed: () async {
+                      _showLoadingOverlay();
+                      await Future.delayed(const Duration(milliseconds: 50));
+                      if (mounted) Navigator.pop(context); // Dismiss loading
+                      _approveRequest(doc.id, email);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
                       shape: RoundedRectangleBorder(
@@ -460,6 +470,16 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
           ],
         ],
       ),
+    );
+  }
+
+  /// Show a loading overlay to prevent multiple clicks
+  void _showLoadingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black26,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
   }
 
