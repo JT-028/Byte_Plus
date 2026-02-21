@@ -44,7 +44,7 @@ class _EditStorePageState extends State<EditStorePage> {
     'Snacks',
     'Desserts',
   ];
-  String? _selectedCategory;
+  final List<String> _selectedCategories = [];
 
   // Operating Hours
   TimeOfDay? _openingTime;
@@ -68,10 +68,10 @@ class _EditStorePageState extends State<EditStorePage> {
     _bannerUrl = data['bannerUrl']?.toString();
     _isActive = data['isActive'] ?? true;
 
-    // Load category
+    // Load categories (supports multiple)
     final cats = data['category'] as List<dynamic>?;
-    if (cats != null && cats.isNotEmpty) {
-      _selectedCategory = cats.first.toString();
+    if (cats != null) {
+      _selectedCategories.addAll(cats.map((e) => e.toString()));
     }
 
     // Load operating hours
@@ -173,43 +173,59 @@ class _EditStorePageState extends State<EditStorePage> {
           maxLines: 3,
         ),
         const SizedBox(height: 16),
-        _labelText('Category', isDark),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: _selectedCategory,
-          decoration: InputDecoration(
-            hintText: 'Select a category',
-            hintStyle: TextStyle(
-              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
-            ),
-            filled: true,
-            fillColor: isDark ? AppColors.backgroundDark : Colors.grey.shade50,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.border,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.border,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-          dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+        _labelText('Categories', isDark),
+        const SizedBox(height: 4),
+        Text(
+          'Select all that apply',
           style: TextStyle(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            fontSize: 12,
+            color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiary,
           ),
-          items: _categoryOptions.map((cat) {
-            return DropdownMenuItem(value: cat, child: Text(cat));
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _categoryOptions.map((cat) {
+            final isSelected = _selectedCategories.contains(cat);
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _selectedCategories.remove(cat);
+                  } else {
+                    _selectedCategories.add(cat);
+                  }
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : (isDark ? AppColors.backgroundDark : Colors.grey.shade50),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : (isDark ? AppColors.borderDark : AppColors.border),
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                ),
+                child: Text(
+                  cat,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+                  ),
+                ),
+              ),
+            );
           }).toList(),
-          onChanged: (val) => setState(() => _selectedCategory = val),
         ),
       ],
     );
@@ -791,7 +807,7 @@ class _EditStorePageState extends State<EditStorePage> {
         'bannerUrl': bannerUrl ?? '',
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
-        'category': _selectedCategory != null ? [_selectedCategory] : [],
+        'category': _selectedCategories,
         'openingTime': _openingTime != null
             ? '${_openingTime!.hour.toString().padLeft(2, '0')}:${_openingTime!.minute.toString().padLeft(2, '0')}'
             : null,
