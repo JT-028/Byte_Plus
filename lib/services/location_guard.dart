@@ -240,15 +240,16 @@ class _LocationGuardState extends State<LocationGuard> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const Spacer(),
                 // Lottie animation
                 Lottie.asset(
                   'assets/animation/restricted.json',
-                  width: 180,
-                  height: 180,
-                  fit: BoxFit.contain,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
                   repeat: true,
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 // Title
                 Text(
                   'Access Restricted',
@@ -276,7 +277,7 @@ class _LocationGuardState extends State<LocationGuard> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                const Spacer(),
                 // Retry button
                 SizedBox(
                   width: double.infinity,
@@ -299,6 +300,7 @@ class _LocationGuardState extends State<LocationGuard> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
