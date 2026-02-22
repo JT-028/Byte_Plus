@@ -1,9 +1,12 @@
 // lib/pages/splash_page.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:lottie/lottie.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
@@ -58,6 +61,25 @@ class _SplashPageState extends State<SplashPage>
   /// Save FCM token to user's Firestore document for push notifications
   Future<void> _saveFcmToken(String uid) async {
     await NotificationService.saveFcmToken(uid);
+  }
+
+  /// Check if location permission is already granted
+  Future<bool> _checkLocationPermission() async {
+    try {
+      // On web, use Geolocator (permission_handler not supported)
+      if (kIsWeb) {
+        final permission = await Geolocator.checkPermission();
+        return permission == LocationPermission.always ||
+            permission == LocationPermission.whileInUse;
+      }
+
+      // Mobile platforms: use permission_handler
+      final status = await Permission.locationWhenInUse.status;
+      return status.isGranted;
+    } catch (e) {
+      // On error, assume permission not granted
+      return false;
+    }
   }
 
   Future<void> _checkAuthState() async {
@@ -135,21 +157,38 @@ class _SplashPageState extends State<SplashPage>
       // Wrap with LocationGuard for geofence enforcement
       destination = LocationGuard(child: destination);
 
-      // Show location permission page for students
-      // (merchants/admins may need different handling)
+      // For students, check if location permission is already granted
+      // Only show LocationPermissionPage if permission is NOT granted
       if (role == 'student') {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder:
-                (_, __, ___) =>
-                    LocationPermissionPage(destination: destination),
-            transitionDuration: const Duration(milliseconds: 500),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-          ),
-        );
+        final hasLocationPermission = await _checkLocationPermission();
+
+        if (hasLocationPermission) {
+          // Permission already granted, go directly to destination
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => destination,
+              transitionDuration: const Duration(milliseconds: 500),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          );
+        } else {
+          // Permission not granted, show location permission page
+          Navigator.pushReplacement(
+            context,
+            PageRouteBuilder(
+              pageBuilder:
+                  (_, __, ___) =>
+                      LocationPermissionPage(destination: destination),
+              transitionDuration: const Duration(milliseconds: 500),
+              transitionsBuilder: (_, animation, __, child) {
+                return FadeTransition(opacity: animation, child: child);
+              },
+            ),
+          );
+        }
       } else {
         Navigator.pushReplacement(
           context,
