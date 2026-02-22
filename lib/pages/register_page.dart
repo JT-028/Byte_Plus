@@ -153,18 +153,9 @@ class _RegisterPageState extends State<RegisterPage> {
         return;
       }
 
-      // Check if email already exists in users collection
-      final existingUser =
-          await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: email)
-              .get();
-
-      if (existingUser.docs.isNotEmpty) {
-        if (!mounted) return;
-        _showError('An account with this email already exists. Please login.');
-        return;
-      }
+      // Note: We don't check users collection here because unauthenticated users
+      // can't read from it. The Cloud Function will handle duplicate email errors
+      // when admin tries to approve the request.
 
       // Create registration request
       final requestData = {
