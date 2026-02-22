@@ -52,13 +52,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
     final uid = user.uid;
     final originalEmail = user.email!;
-    final domain = "@canteen.spcf.co";
-
-    // Make sure email stays within domain
     String editedEmail = emailCtrl.text.trim();
-    if (!editedEmail.endsWith(domain)) {
-      editedEmail = "${editedEmail.split('@')[0]}$domain";
-    }
 
     try {
       // Update Firestore (name + email)
@@ -67,7 +61,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
         "email": editedEmail,
       });
 
-      // Update FirebaseAuth email (only local part changes)
+      // Update FirebaseAuth email if changed
       if (originalEmail != editedEmail) {
         await user.updateEmail(editedEmail);
       }
@@ -318,17 +312,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
             const SizedBox(height: 8),
             TextField(
               controller: emailCtrl,
-              onChanged: (v) {
-                final domain = "@canteen.spcf.co";
-                if (!v.contains(domain)) {
-                  setState(() {
-                    emailCtrl.text = "${v.split('@')[0]}$domain";
-                    emailCtrl.selection = TextSelection.fromPosition(
-                      TextPosition(offset: emailCtrl.text.split('@')[0].length),
-                    );
-                  });
-                }
-              },
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: const Color(0xFFF5F5F5),

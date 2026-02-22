@@ -138,383 +138,422 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Profile",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color:
-                      isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Profile card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color:
-                      isDark ? AppColors.surfaceDark : const Color(0xFFF0F2FF),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(Icons.store, color: Colors.white),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        FirebaseAuth.instance.currentUser?.email ?? "",
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color:
-                              isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Dark Mode Toggle
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      isDark ? AppColors.surfaceDark : AppColors.surfaceVariant,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isDark ? Icons.dark_mode : Icons.light_mode,
-                      color:
-                          isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        "Dark Mode",
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    Consumer<ThemeService>(
-                      builder: (context, themeService, _) {
-                        return Switch(
-                          value: themeService.isDarkMode,
-                          onChanged: (_) => themeService.toggleTheme(),
-                          activeThumbColor: AppColors.primary,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Printer Settings
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PrinterSettingsPage(),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        isDark
-                            ? AppColors.surfaceDark
-                            : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Row(
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      StreamBuilder<PrinterStatus>(
-                        stream: ThermalPrinterService().statusStream,
-                        initialData: ThermalPrinterService().status,
-                        builder: (context, snapshot) {
-                          final isConnected =
-                              snapshot.data == PrinterStatus.connected;
-                          return Icon(
-                            Iconsax.printer,
-                            color:
-                                isConnected
-                                    ? AppColors.success
-                                    : (isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary),
-                          );
-                        },
+                      Text(
+                        "Profile",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 16),
+
+                      // Profile card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark
+                                  ? AppColors.surfaceDark
+                                  : const Color(0xFFF0F2FF),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              "Printer Settings",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary,
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: const Icon(
+                                Icons.store,
+                                color: Colors.white,
                               ),
                             ),
-                            StreamBuilder<PrinterStatus>(
-                              stream: ThermalPrinterService().statusStream,
-                              initialData: ThermalPrinterService().status,
-                              builder: (context, snapshot) {
-                                final isConnected =
-                                    snapshot.data == PrinterStatus.connected;
-                                final printer =
-                                    ThermalPrinterService().connectedPrinter;
-                                return Text(
-                                  isConnected
-                                      ? 'Connected: ${printer?.name ?? "Printer"}'
-                                      : 'Not connected',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color:
-                                        isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondary,
-                                  ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                FirebaseAuth.instance.currentUser?.email ?? "",
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color:
+                                      isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Dark Mode Toggle
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark
+                                  ? AppColors.surfaceDark
+                                  : AppColors.surfaceVariant,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isDark ? Icons.dark_mode : Icons.light_mode,
+                              color:
+                                  isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                "Dark Mode",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary,
+                                ),
+                              ),
+                            ),
+                            Consumer<ThemeService>(
+                              builder: (context, themeService, _) {
+                                return Switch(
+                                  value: themeService.isDarkMode,
+                                  onChanged: (_) => themeService.toggleTheme(),
+                                  activeThumbColor: AppColors.primary,
                                 );
                               },
                             ),
                           ],
                         ),
                       ),
-                      Icon(
-                        Iconsax.arrow_right_3,
-                        color:
-                            isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
-                        size: 20,
+
+                      const SizedBox(height: 12),
+
+                      // Printer Settings
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PrinterSettingsPage(),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                isDark
+                                    ? AppColors.surfaceDark
+                                    : AppColors.surfaceVariant,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              StreamBuilder<PrinterStatus>(
+                                stream: ThermalPrinterService().statusStream,
+                                initialData: ThermalPrinterService().status,
+                                builder: (context, snapshot) {
+                                  final isConnected =
+                                      snapshot.data == PrinterStatus.connected;
+                                  return Icon(
+                                    Iconsax.printer,
+                                    color:
+                                        isConnected
+                                            ? AppColors.success
+                                            : (isDark
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimary),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Printer Settings",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isDark
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    StreamBuilder<PrinterStatus>(
+                                      stream:
+                                          ThermalPrinterService().statusStream,
+                                      initialData:
+                                          ThermalPrinterService().status,
+                                      builder: (context, snapshot) {
+                                        final isConnected =
+                                            snapshot.data ==
+                                            PrinterStatus.connected;
+                                        final printer =
+                                            ThermalPrinterService()
+                                                .connectedPrinter;
+                                        return Text(
+                                          isConnected
+                                              ? 'Connected: ${printer?.name ?? "Printer"}'
+                                              : 'Not connected',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                isDark
+                                                    ? AppColors
+                                                        .textSecondaryDark
+                                                    : AppColors.textSecondary,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Iconsax.arrow_right_3,
+                                color:
+                                    isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
+
+                      const SizedBox(height: 12),
+
+                      // Operating Hours
+                      if (_storeId != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                isDark
+                                    ? AppColors.surfaceDark
+                                    : AppColors.surfaceVariant,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Iconsax.clock,
+                                    color:
+                                        isDark
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.textPrimary,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      "Operating Hours",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isDark
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => _pickTime(isOpening: true),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? AppColors.backgroundDark
+                                                  : Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                isDark
+                                                    ? AppColors.borderDark
+                                                    : AppColors.border,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              'Opens',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color:
+                                                    isDark
+                                                        ? AppColors
+                                                            .textSecondaryDark
+                                                        : AppColors
+                                                            .textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _openingTime != null
+                                                  ? _formatTimeOfDay(
+                                                    _openingTime!,
+                                                  )
+                                                  : 'Set time',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color:
+                                                    _openingTime != null
+                                                        ? AppColors.primary
+                                                        : (isDark
+                                                            ? AppColors
+                                                                .textTertiaryDark
+                                                            : AppColors
+                                                                .textTertiary),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                    child: Text(
+                                      '–',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: InkWell(
+                                      onTap: () => _pickTime(isOpening: false),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isDark
+                                                  ? AppColors.backgroundDark
+                                                  : Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color:
+                                                isDark
+                                                    ? AppColors.borderDark
+                                                    : AppColors.border,
+                                          ),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              'Closes',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color:
+                                                    isDark
+                                                        ? AppColors
+                                                            .textSecondaryDark
+                                                        : AppColors
+                                                            .textSecondary,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _closingTime != null
+                                                  ? _formatTimeOfDay(
+                                                    _closingTime!,
+                                                  )
+                                                  : 'Set time',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color:
+                                                    _closingTime != null
+                                                        ? AppColors.primary
+                                                        : (isDark
+                                                            ? AppColors
+                                                                .textTertiaryDark
+                                                            : AppColors
+                                                                .textTertiary),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      if (_storeId != null) const SizedBox(height: 12),
                     ],
                   ),
                 ),
               ),
 
               const SizedBox(height: 12),
-
-              // Operating Hours
-              if (_storeId != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        isDark
-                            ? AppColors.surfaceDark
-                            : AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Iconsax.clock,
-                            color:
-                                isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimary,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Text(
-                              "Operating Hours",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    isDark
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _pickTime(isOpening: true),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDark
-                                          ? AppColors.backgroundDark
-                                          : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color:
-                                        isDark
-                                            ? AppColors.borderDark
-                                            : AppColors.border,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Opens',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            isDark
-                                                ? AppColors.textSecondaryDark
-                                                : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _openingTime != null
-                                          ? _formatTimeOfDay(_openingTime!)
-                                          : 'Set time',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            _openingTime != null
-                                                ? AppColors.primary
-                                                : (isDark
-                                                    ? AppColors.textTertiaryDark
-                                                    : AppColors.textTertiary),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Text(
-                              '–',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color:
-                                    isDark
-                                        ? AppColors.textSecondaryDark
-                                        : AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _pickTime(isOpening: false),
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      isDark
-                                          ? AppColors.backgroundDark
-                                          : Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color:
-                                        isDark
-                                            ? AppColors.borderDark
-                                            : AppColors.border,
-                                  ),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Closes',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color:
-                                            isDark
-                                                ? AppColors.textSecondaryDark
-                                                : AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _closingTime != null
-                                          ? _formatTimeOfDay(_closingTime!)
-                                          : 'Set time',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            _closingTime != null
-                                                ? AppColors.primary
-                                                : (isDark
-                                                    ? AppColors.textTertiaryDark
-                                                    : AppColors.textTertiary),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-              if (_storeId != null) const SizedBox(height: 12),
-
-              const Spacer(),
 
               // Logout button
               SizedBox(

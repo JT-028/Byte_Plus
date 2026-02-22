@@ -33,9 +33,10 @@ class ProfilePage extends StatelessWidget {
             final data = (snap.data?.data() as Map<String, dynamic>?) ?? {};
 
             final displayName = (data['name'] ?? '').toString().trim();
+            // Show the actual Firebase Auth email, not the Firestore one
             final email =
-                (data['email'] ??
-                        FirebaseAuth.instance.currentUser?.email ??
+                (FirebaseAuth.instance.currentUser?.email ??
+                        data['email'] ??
                         '')
                     .toString()
                     .trim();

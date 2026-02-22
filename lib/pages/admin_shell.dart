@@ -9,7 +9,7 @@ import '../pages/login_page.dart';
 import '../pages/admin/admin_dashboard_page.dart';
 import '../pages/admin/admin_users_page.dart';
 import '../pages/admin/admin_stores_page.dart';
-import '../pages/admin/admin_password_requests_page.dart';
+import '../pages/admin/admin_registration_requests_page.dart';
 import '../pages/admin/admin_geofence_settings_page.dart';
 import '../widgets/app_modal_dialog.dart';
 
@@ -29,7 +29,7 @@ class _AdminShellState extends State<AdminShell> {
     AdminDashboardPage(),
     AdminUsersPage(),
     AdminStoresPage(),
-    AdminPasswordRequestsPage(),
+    AdminRegistrationRequestsPage(),
     AdminGeofenceSettingsPage(),
   ];
 
@@ -106,7 +106,7 @@ class _AdminShellState extends State<AdminShell> {
         StreamBuilder<QuerySnapshot>(
           stream:
               FirebaseFirestore.instance
-                  .collection('passwordRequests')
+                  .collection('registrationRequests')
                   .where('status', isEqualTo: 'pending')
                   .snapshots(),
           builder: (context, snap) {
@@ -152,135 +152,137 @@ class _AdminShellState extends State<AdminShell> {
     return Drawer(
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       child: SafeArea(
-        child: Column(
-          children: [
-            // Profile header
-            FutureBuilder<DocumentSnapshot>(
-              future:
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(_user.uid)
-                      .get(),
-              builder: (context, snap) {
-                final data = snap.data?.data() as Map<String, dynamic>? ?? {};
-                return Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.primaryDark : AppColors.primary,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Iconsax.shield_tick,
-                            color: AppColors.primary,
-                            size: 28,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Profile header
+              FutureBuilder<DocumentSnapshot>(
+                future:
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(_user.uid)
+                        .get(),
+                builder: (context, snap) {
+                  final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.primaryDark : AppColors.primary,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Iconsax.shield_tick,
+                              color: AppColors.primary,
+                              size: 28,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        data['name']?.toString() ?? 'Admin',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        data['email']?.toString() ?? _user.email ?? '',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'Administrator',
-                          style: TextStyle(
+                        const SizedBox(height: 14),
+                        Text(
+                          data['name']?.toString() ?? 'Admin',
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
+                            fontSize: 18,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            // Nav items
-            _drawerItem(
-              icon: Iconsax.home_2,
-              label: 'Dashboard',
-              index: 0,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.people,
-              label: 'Manage Users',
-              index: 1,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.shop,
-              label: 'Manage Stores',
-              index: 2,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.key,
-              label: 'Password Requests',
-              index: 3,
-              isDark: isDark,
-              showBadge: true,
-            ),
-            _drawerItem(
-              icon: Iconsax.location,
-              label: 'Geofence Settings',
-              index: 4,
-              isDark: isDark,
-            ),
-
-            const Spacer(),
-
-            // Logout
-            Divider(color: isDark ? AppColors.borderDark : AppColors.border),
-            ListTile(
-              leading: const Icon(Iconsax.logout, color: AppColors.error),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
-                ),
+                        const SizedBox(height: 2),
+                        Text(
+                          data['email']?.toString() ?? _user.email ?? '',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Administrator',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-              onTap: _logout,
-            ),
-            const SizedBox(height: 12),
-          ],
+
+              const SizedBox(height: 12),
+
+              // Nav items
+              _drawerItem(
+                icon: Iconsax.home_2,
+                label: 'Dashboard',
+                index: 0,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.people,
+                label: 'Manage Users',
+                index: 1,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.shop,
+                label: 'Manage Stores',
+                index: 2,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.user_add,
+                label: 'Registrations',
+                index: 3,
+                isDark: isDark,
+                showBadge: true,
+              ),
+              _drawerItem(
+                icon: Iconsax.location,
+                label: 'Geofence Settings',
+                index: 4,
+                isDark: isDark,
+              ),
+
+              const Spacer(),
+
+              // Logout
+              Divider(color: isDark ? AppColors.borderDark : AppColors.border),
+              ListTile(
+                leading: const Icon(Iconsax.logout, color: AppColors.error),
+                title: const Text(
+                  'Logout',
+                  style: TextStyle(
+                    color: AppColors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: _logout,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );
@@ -311,7 +313,7 @@ class _AdminShellState extends State<AdminShell> {
             StreamBuilder<QuerySnapshot>(
               stream:
                   FirebaseFirestore.instance
-                      .collection('passwordRequests')
+                      .collection('registrationRequests')
                       .where('status', isEqualTo: 'pending')
                       .snapshots(),
               builder: (context, snap) {
@@ -383,7 +385,7 @@ class _AdminShellState extends State<AdminShell> {
               _navItem(Iconsax.home_2, 'Dashboard', 0, isDark),
               _navItem(Iconsax.people, 'Users', 1, isDark),
               _navItem(Iconsax.shop, 'Stores', 2, isDark),
-              _navItemWithBadge(Iconsax.key, 'Requests', 3, isDark),
+              _navItemWithBadge(Iconsax.user_add, 'Register', 3, isDark),
             ],
           ),
         ),
@@ -476,7 +478,7 @@ class _AdminShellState extends State<AdminShell> {
                 StreamBuilder<QuerySnapshot>(
                   stream:
                       FirebaseFirestore.instance
-                          .collection('passwordRequests')
+                          .collection('registrationRequests')
                           .where('status', isEqualTo: 'pending')
                           .snapshots(),
                   builder: (context, snap) {

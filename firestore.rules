@@ -302,5 +302,17 @@ service cloud.firestore {
       // Admin can read, approve/reject, delete
       allow read, update, delete: if isAdmin();
     }
+
+    // ==================== REGISTRATION REQUESTS ====================
+    match /registrationRequests/{reqId} {
+      // Anyone can submit a registration request (unauthenticated users registering)
+      allow create: if true;
+
+      // Allow reading to check for duplicate pending requests (by email query)
+      allow read: if true;
+
+      // Admin can update (approve/reject) and delete
+      allow update, delete: if isAdmin();
+    }
   }
 }

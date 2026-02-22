@@ -15,11 +15,74 @@
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+// Email transporter configuration
+// Set EMAIL_USER and EMAIL_PASS in functions/.env file
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+/**
+ * Send email verification to newly registered user
+ */
+async function sendVerificationEmail(email, name, verificationLink) {
+  const mailOptions = {
+    from: `"BytePlus" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Verify your BytePlus account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #4CAF50; padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0;">BytePlus</h1>
+        </div>
+        <div style="padding: 30px; background-color: #f9f9f9;">
+          <h2 style="color: #333;">Welcome, ${name}!</h2>
+          <p style="color: #666; font-size: 16px; line-height: 1.6;">
+            Your registration has been approved! Please verify your email address to activate your account.
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationLink}" 
+               style="background-color: #4CAF50; color: white; padding: 15px 30px; 
+                      text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold;">
+              Verify Email Address
+            </a>
+          </div>
+          <p style="color: #999; font-size: 14px;">
+            If you didn't create an account with BytePlus, you can safely ignore this email.
+          </p>
+          <p style="color: #999; font-size: 14px;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${verificationLink}" style="color: #4CAF50;">${verificationLink}</a>
+          </p>
+        </div>
+        <div style="background-color: #333; padding: 20px; text-align: center;">
+          <p style="color: #999; margin: 0; font-size: 12px;">
+            © 2024 BytePlus - SPCF Campus Food Ordering
+          </p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Verification email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    return false;
+  }
+}
 
 /**
  * Trigger: When a new notification document is created in /notifications
@@ -260,6 +323,61 @@ exports.deleteUserAuth = functions.https.onCall(async (data, context) => {
 });
 
 /**
+ * Resend email verification link
+ * Called by users who need their verification email resent
+ */
+exports.resendVerificationEmail = functions.https.onCall(async (data) => {
+  const { email } = data;
+
+  if (!email) {
+    throw new functions.https.HttpsError('invalid-argument', 'Email is required');
+  }
+
+  try {
+    // Get user by email
+    const userRecord = await admin.auth().getUserByEmail(email);
+    
+    // Check if already verified
+    if (userRecord.emailVerified) {
+      throw new functions.https.HttpsError('already-exists', 'Email is already verified. You can log in now.');
+    }
+
+    // Get user's name from Firestore
+    const userDoc = await db.collection('users').doc(userRecord.uid).get();
+    const userName = userDoc.exists ? userDoc.data().name : 'User';
+
+    // Generate and send verification email
+    const actionCodeSettings = {
+      url: 'https://canteen-application-demo.firebaseapp.com/verified',
+      handleCodeInApp: false,
+    };
+    
+    const verificationLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
+    const emailSent = await sendVerificationEmail(email, userName, verificationLink);
+
+    if (!emailSent) {
+      throw new functions.https.HttpsError('internal', 'Failed to send verification email. Please try again.');
+    }
+
+    return { 
+      success: true, 
+      message: 'Verification email sent! Please check your inbox.' 
+    };
+  } catch (error) {
+    console.error('Error resending verification email:', error);
+    
+    if (error.code === 'auth/user-not-found') {
+      throw new functions.https.HttpsError('not-found', 'No account found with this email.');
+    }
+    
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+/**
  * Create user in Firebase Authentication and Firestore
  * Only admins can call this function
  * This avoids the auth state switching problem on the client
@@ -276,7 +394,7 @@ exports.createUserAuth = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('permission-denied', 'Only admins can create users');
   }
 
-  const { email, password, name, role } = data;
+  const { email, password, name, role, storeName, studentId, fromRegistrationRequest } = data;
   
   // Validate input
   if (!email || !password || !name || !role) {
@@ -294,27 +412,69 @@ exports.createUserAuth = functions.https.onCall(async (data, context) => {
       email: email,
       password: password,
       displayName: name,
+      emailVerified: false, // User must verify email
     });
 
     console.log(`Successfully created user ${userRecord.uid} in Firebase Auth`);
 
     // Create Firestore document for the user
-    await db.collection('users').doc(userRecord.uid).set({
+    const userData = {
       name: name,
       email: email,
       role: role,
-      emailVerified: true, // Admin-created accounts are pre-verified
-      status: 'active',
+      emailVerified: false, // User must verify email before account is fully active
+      status: 'pending_verification', // Account pending email verification
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       createdBy: context.auth.uid,
-    });
+    };
+
+    // Add store name for merchants from registration requests
+    if (role === 'staff' && storeName) {
+      userData.storeName = storeName;
+    }
+
+    // Add student ID for students from registration requests
+    if (role === 'student' && studentId) {
+      userData.studentId = studentId;
+    }
+
+    // Track if created from a registration request
+    if (fromRegistrationRequest) {
+      userData.fromRegistrationRequest = true;
+    }
+
+    await db.collection('users').doc(userRecord.uid).set(userData);
 
     console.log(`Created Firestore document for user ${userRecord.uid}`);
 
+    // Generate email verification link and send email
+    let emailSent = false;
+    try {
+      const actionCodeSettings = {
+        url: 'https://canteen-application-demo.firebaseapp.com/verified',
+        handleCodeInApp: false,
+      };
+      
+      const verificationLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
+      emailSent = await sendVerificationEmail(email, name, verificationLink);
+      
+      if (emailSent) {
+        console.log(`Verification email sent to ${email}`);
+      } else {
+        console.warn(`Failed to send verification email to ${email}, but account was created`);
+      }
+    } catch (emailError) {
+      console.error('Error generating/sending verification email:', emailError);
+      // Don't fail the whole operation if email fails - account is still created
+    }
+
     return { 
       success: true, 
-      message: 'User created successfully',
-      userId: userRecord.uid 
+      message: emailSent 
+        ? 'User created successfully. Verification email sent.' 
+        : 'User created successfully. Please ask the user to request a verification email.',
+      userId: userRecord.uid,
+      emailSent: emailSent
     };
   } catch (error) {
     console.error('Error creating user:', error);

@@ -38,12 +38,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         label: const Text('Add User'),
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _header(isDark),
-            _searchAndFilter(isDark),
-            Expanded(child: _usersList(isDark)),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(child: _header(isDark)),
+            SliverToBoxAdapter(child: _searchAndFilter(isDark)),
+            SliverFillRemaining(hasScrollBody: true, child: _usersList(isDark)),
           ],
         ),
       ),
@@ -1192,8 +1191,22 @@ class _CreateEditUserSheetState extends State<_CreateEditUserSheet> {
                       if (v == null || v.isEmpty) {
                         return 'Please enter a password';
                       }
-                      if (v.length < 6) {
-                        return 'Password must be at least 6 characters';
+                      if (v.length < 8) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      if (v.length > 16) {
+                        return 'Password must not exceed 16 characters';
+                      }
+                      if (!RegExp(r'[a-zA-Z]').hasMatch(v)) {
+                        return 'Must contain at least one letter';
+                      }
+                      if (!RegExp(r'[0-9]').hasMatch(v)) {
+                        return 'Must contain at least one number';
+                      }
+                      final specialCount =
+                          RegExp(r'[!@#\$%]').allMatches(v).length;
+                      if (specialCount < 2) {
+                        return 'Must have at least 2 special chars (!@#\$%)';
                       }
                       return null;
                     },

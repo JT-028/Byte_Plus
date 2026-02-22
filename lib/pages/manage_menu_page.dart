@@ -1762,6 +1762,31 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // CATEGORY OPTIONS
   // ============================================
+
+  Future<void> _editCategory(String categoryId) async {
+    // Fetch category data and navigate to edit page
+    final catDoc =
+        await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeId)
+            .collection('categories')
+            .doc(categoryId)
+            .get();
+    if (mounted && catDoc.exists) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => AddCategoryPage(
+                storeId: storeId!,
+                categoryId: categoryId,
+                existingData: catDoc.data(),
+              ),
+        ),
+      );
+    }
+  }
+
   void _showCategoryOptions(
     String categoryId,
     String categoryName,
@@ -1798,29 +1823,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                     icon: Iconsax.edit,
                     label: 'Edit Category',
                     isDark: isDark,
-                    onTap: () async {
+                    onTap: () {
                       Navigator.pop(context);
-                      // Fetch category data and navigate to edit page
-                      final catDoc =
-                          await FirebaseFirestore.instance
-                              .collection('stores')
-                              .doc(storeId)
-                              .collection('categories')
-                              .doc(categoryId)
-                              .get();
-                      if (mounted && catDoc.exists) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => AddCategoryPage(
-                                  storeId: storeId!,
-                                  categoryId: categoryId,
-                                  existingData: catDoc.data(),
-                                ),
-                          ),
-                        );
-                      }
+                      _editCategory(categoryId);
                     },
                   ),
                   const SizedBox(height: 12),
@@ -1851,42 +1856,45 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     bool isDestructive = false,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.backgroundDark : AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color:
-                  isDestructive
-                      ? AppColors.error
-                      : (isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.backgroundDark : AppColors.background,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
                 color:
                     isDestructive
                         ? AppColors.error
                         : (isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary),
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color:
+                      isDestructive
+                          ? AppColors.error
+                          : (isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -244,234 +244,242 @@ class _MerchantShellState extends State<MerchantShell> {
     return Drawer(
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       child: SafeArea(
-        child: Column(
-          children: [
-            // Profile header
-            FutureBuilder<DocumentSnapshot>(
-              future:
-                  FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(_user.uid)
-                      .get(),
-              builder: (context, userSnap) {
-                final userData =
-                    userSnap.data?.data() as Map<String, dynamic>? ?? {};
-                final storeId = userData['storeId']?.toString() ?? '';
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Profile header
+              FutureBuilder<DocumentSnapshot>(
+                future:
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(_user.uid)
+                        .get(),
+                builder: (context, userSnap) {
+                  final userData =
+                      userSnap.data?.data() as Map<String, dynamic>? ?? {};
+                  final storeId = userData['storeId']?.toString() ?? '';
 
-                return FutureBuilder<DocumentSnapshot>(
-                  future:
-                      storeId.isNotEmpty
-                          ? FirebaseFirestore.instance
-                              .collection('stores')
-                              .doc(storeId)
-                              .get()
-                          : Future.value(null),
-                  builder: (context, storeSnap) {
-                    final storeData =
-                        storeSnap.data?.data() as Map<String, dynamic>? ?? {};
-                    final storeName =
-                        storeData['name']?.toString() ?? 'My Store';
-                    final storeLogo = storeData['logoUrl']?.toString();
+                  return FutureBuilder<DocumentSnapshot>(
+                    future:
+                        storeId.isNotEmpty
+                            ? FirebaseFirestore.instance
+                                .collection('stores')
+                                .doc(storeId)
+                                .get()
+                            : Future.value(null),
+                    builder: (context, storeSnap) {
+                      final storeData =
+                          storeSnap.data?.data() as Map<String, dynamic>? ?? {};
+                      final storeName =
+                          storeData['name']?.toString() ?? 'My Store';
+                      final storeLogo = storeData['logoUrl']?.toString();
 
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color:
-                            isDark ? AppColors.primaryDark : AppColors.primary,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 56,
-                            height: 56,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child:
-                                  storeLogo != null && storeLogo.isNotEmpty
-                                      ? Image.network(
-                                        storeLogo,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (_, __, ___) => const Center(
-                                              child: Icon(
-                                                Iconsax.shop,
-                                                color: AppColors.primary,
-                                                size: 28,
-                                              ),
-                                            ),
-                                      )
-                                      : const Center(
-                                        child: Icon(
-                                          Iconsax.shop,
-                                          color: AppColors.primary,
-                                          size: 28,
-                                        ),
-                                      ),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            storeName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            userData['email']?.toString() ?? _user.email ?? '',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Merchant',
-                              style: TextStyle(
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
                                 color: Colors.white,
-                                fontSize: 11,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child:
+                                    storeLogo != null && storeLogo.isNotEmpty
+                                        ? Image.network(
+                                          storeLogo,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (_, __, ___) => const Center(
+                                                child: Icon(
+                                                  Iconsax.shop,
+                                                  color: AppColors.primary,
+                                                  size: 28,
+                                                ),
+                                              ),
+                                        )
+                                        : const Center(
+                                          child: Icon(
+                                            Iconsax.shop,
+                                            color: AppColors.primary,
+                                            size: 28,
+                                          ),
+                                        ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              storeName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-
-            const SizedBox(height: 12),
-
-            // Nav items
-            _drawerItem(
-              icon: Iconsax.receipt_item,
-              label: 'Orders',
-              index: 0,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.menu_board,
-              label: 'Manage Menu',
-              index: 1,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.chart,
-              label: 'Analytics',
-              index: 2,
-              isDark: isDark,
-            ),
-            _drawerItem(
-              icon: Iconsax.user,
-              label: 'Profile',
-              index: 3,
-              isDark: isDark,
-            ),
-
-            const Divider(height: 32),
-
-            // Quick actions
-            ListTile(
-              leading: Icon(
-                Iconsax.document_text,
-                color:
-                    isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
+                            const SizedBox(height: 2),
+                            Text(
+                              userData['email']?.toString() ??
+                                  _user.email ??
+                                  '',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Merchant',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-              title: Text(
-                'Order Reports',
-                style: TextStyle(
+
+              const SizedBox(height: 12),
+
+              // Nav items
+              _drawerItem(
+                icon: Iconsax.receipt_item,
+                label: 'Orders',
+                index: 0,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.menu_board,
+                label: 'Manage Menu',
+                index: 1,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.chart,
+                label: 'Analytics',
+                index: 2,
+                isDark: isDark,
+              ),
+              _drawerItem(
+                icon: Iconsax.user,
+                label: 'Profile',
+                index: 3,
+                isDark: isDark,
+              ),
+
+              const Divider(height: 32),
+
+              // Quick actions
+              ListTile(
+                leading: Icon(
+                  Iconsax.document_text,
                   color:
                       isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
                 ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const OrderReportsPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Iconsax.printer,
-                color:
-                    isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
-              ),
-              title: Text(
-                'Printer Settings',
-                style: TextStyle(
-                  color:
-                      isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PrinterSettingsPage(),
+                title: Text(
+                  'Order Reports',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Iconsax.notification,
-                color:
-                    isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const OrderReportsPage()),
+                  );
+                },
               ),
-              title: Text(
-                'Notifications',
-                style: TextStyle(
+              ListTile(
+                leading: Icon(
+                  Iconsax.printer,
                   color:
                       isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
                 ),
+                title: Text(
+                  'Printer Settings',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PrinterSettingsPage(),
+                    ),
+                  );
+                },
               ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NotificationsPage()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-          ],
+              ListTile(
+                leading: Icon(
+                  Iconsax.notification,
+                  color:
+                      isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+                title: Text(
+                  'Notifications',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
       ),
     );
