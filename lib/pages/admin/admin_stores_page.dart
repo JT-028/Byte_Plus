@@ -6,6 +6,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_modal_dialog.dart';
 import 'edit_store_page.dart';
+import 'geofence_map_picker.dart';
 
 class AdminStoresPage extends StatefulWidget {
   const AdminStoresPage({super.key});
@@ -575,147 +576,40 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     String storeId,
     Map<String, dynamic> data,
     bool isDark,
-  ) {
-    final latController = TextEditingController(
-      text: data['latitude']?.toString() ?? '',
-    );
-    final lngController = TextEditingController(
-      text: data['longitude']?.toString() ?? '',
-    );
-    final radiusController = TextEditingController(
-      text: (data['geofenceRadius'] ?? 100).toString(),
-    );
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-        return AnimatedPadding(
-          duration: const Duration(milliseconds: 100),
-          padding: EdgeInsets.fromLTRB(20, 20, 20, bottomInset + 20),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sheetHandle(isDark),
-                const SizedBox(height: 20),
-                Text(
-                  'Geofence Settings',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Configure the pickup zone for "${data['name']}"',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _textField(
-                  latController,
-                  'Latitude',
-                  Iconsax.location,
-                  isDark,
-                  isNumber: true,
-                ),
-                const SizedBox(height: 12),
-                _textField(
-                  lngController,
-                  'Longitude',
-                  Iconsax.location,
-                  isDark,
-                  isNumber: true,
-                ),
-                const SizedBox(height: 12),
-                _textField(
-                  radiusController,
-                  'Radius (meters)',
-                  Iconsax.maximize,
-                  isDark,
-                  isNumber: true,
-                ),
-                const SizedBox(height: 16),
-                // Info card
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.info.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Iconsax.info_circle,
-                        color: AppColors.info,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Users must be within this radius to pick up orders from this store.',
-                          style: TextStyle(fontSize: 12, color: AppColors.info),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _actionButtons(
-                  isDark: isDark,
-                  onCancel: () => Navigator.pop(context),
-                  onConfirm: () async {
-                    final lat = double.tryParse(latController.text.trim());
-                    final lng = double.tryParse(lngController.text.trim());
-                    final radius =
-                        double.tryParse(radiusController.text.trim()) ?? 100;
-
-                    await FirebaseFirestore.instance
-                        .collection('stores')
-                        .doc(storeId)
-                        .update({
-                          'latitude': lat,
-                          'longitude': lng,
-                          'geofenceRadius': radius,
-                          'updatedAt': FieldValue.serverTimestamp(),
-                        });
-
-                    if (mounted) {
-                      Navigator.pop(context);
-                      await AppModalDialog.success(
-                        context: context,
-                        title: 'Geofence Updated',
-                        message:
-                            lat != null && lng != null
-                                ? 'The geofence has been configured.'
-                                : 'The geofence has been cleared.',
-                      );
-                    }
-                  },
-                  confirmLabel: 'Save Geofence',
-                ),
-              ],
+  ) async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => GeofenceMapPicker(
+              initialLat: (data['latitude'] as num?)?.toDouble(),
+              initialLng: (data['longitude'] as num?)?.toDouble(),
+              initialRadius:
+                  (data['geofenceRadius'] as num?)?.toDouble() ?? 100,
+              storeName: data['name']?.toString() ?? 'Store',
             ),
-          ),
-        );
-      },
+      ),
     );
+
+    if (result != null && mounted) {
+      await FirebaseFirestore.instance
+          .collection('stores')
+          .doc(storeId)
+          .update({
+            'latitude': result['latitude'],
+            'longitude': result['longitude'],
+            'geofenceRadius': result['radius'],
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      if (mounted) {
+        await AppModalDialog.success(
+          context: context,
+          title: 'Geofence Updated',
+          message: 'The geofence has been configured.',
+        );
+      }
+    }
   }
 
   Future<void> _deleteStore(String storeId, String storeName) async {

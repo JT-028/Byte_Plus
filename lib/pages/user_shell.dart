@@ -2216,6 +2216,32 @@ class _CartPageState extends State<CartPage> {
                               throw Exception("No stores selected");
                             }
 
+                            // Check all stores are open before placing any orders
+                            for (final storeId in storeItemsMap.keys) {
+                              final storeDoc =
+                                  await FirebaseFirestore.instance
+                                      .collection("stores")
+                                      .doc(storeId)
+                                      .get();
+
+                              if (storeDoc.exists) {
+                                final storeData =
+                                    storeDoc.data() as Map<String, dynamic>;
+                                final openingTime =
+                                    storeData['openingTime']?.toString();
+                                final closingTime =
+                                    storeData['closingTime']?.toString();
+                                final storeName =
+                                    storeData['name']?.toString() ?? 'Store';
+
+                                if (!_isStoreOpen(openingTime, closingTime)) {
+                                  throw Exception(
+                                    '$storeName is currently closed. Please try again during operating hours.',
+                                  );
+                                }
+                              }
+                            }
+
                             // Place order for each selected store
                             for (final entry in storeItemsMap.entries) {
                               final storeId = entry.key;

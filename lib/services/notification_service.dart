@@ -223,6 +223,39 @@ class NotificationService {
     await batch.commit();
   }
 
+  /// Delete a single notification
+  static Future<void> deleteNotification(
+    String userId,
+    String notificationId,
+  ) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .delete();
+  }
+
+  /// Delete all read notifications
+  static Future<int> deleteAllReadNotifications(String userId) async {
+    final batch = _firestore.batch();
+
+    final readNotifications =
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .where('read', isEqualTo: true)
+            .get();
+
+    for (var doc in readNotifications.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
+    return readNotifications.docs.length;
+  }
+
   /// Send notification to merchant when a new order is placed
   static Future<void> sendNewOrderNotification({
     required String storeId,

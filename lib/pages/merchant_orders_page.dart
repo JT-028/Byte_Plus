@@ -138,14 +138,37 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Expanded(
+          // Store logo on left
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child:
+                  storeLogo != null && storeLogo!.isNotEmpty
+                      ? Image.network(
+                        storeLogo!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _defaultLogo(),
+                      )
+                      : _defaultLogo(),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Store name
+          Expanded(
             child: Text(
-              "BytePlus",
-              style: TextStyle(
+              storeName ?? 'My Store',
+              style: const TextStyle(
                 color: Colors.white,
-                fontSize: 24,
+                fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           // Reports button
@@ -228,27 +251,6 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 ],
               );
             },
-          ),
-          const SizedBox(width: 4),
-          // Store logo
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child:
-                  storeLogo != null && storeLogo!.isNotEmpty
-                      ? Image.network(
-                        storeLogo!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _defaultLogo(),
-                      )
-                      : _defaultLogo(),
-            ),
           ),
         ],
       ),

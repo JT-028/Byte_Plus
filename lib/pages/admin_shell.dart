@@ -10,6 +10,7 @@ import '../pages/admin/admin_dashboard_page.dart';
 import '../pages/admin/admin_users_page.dart';
 import '../pages/admin/admin_stores_page.dart';
 import '../pages/admin/admin_password_requests_page.dart';
+import '../pages/admin/admin_geofence_settings_page.dart';
 import '../widgets/app_modal_dialog.dart';
 
 class AdminShell extends StatefulWidget {
@@ -29,6 +30,7 @@ class _AdminShellState extends State<AdminShell> {
     AdminUsersPage(),
     AdminStoresPage(),
     AdminPasswordRequestsPage(),
+    AdminGeofenceSettingsPage(),
   ];
 
   @override
@@ -238,6 +240,12 @@ class _AdminShellState extends State<AdminShell> {
               index: 3,
               isDark: isDark,
               showBadge: true,
+            ),
+            _drawerItem(
+              icon: Iconsax.location,
+              label: 'Geofence Settings',
+              index: 4,
+              isDark: isDark,
             ),
 
             const Spacer(),

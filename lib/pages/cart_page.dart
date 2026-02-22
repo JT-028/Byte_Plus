@@ -483,6 +483,54 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
+  bool _isStoreOpen(String? openingTime, String? closingTime) {
+    // If hours aren't set, consider store open (merchant hasn't configured hours)
+    if (openingTime == null ||
+        closingTime == null ||
+        openingTime.isEmpty ||
+        closingTime.isEmpty) {
+      debugPrint('Store hours not set - defaulting to open');
+      return true;
+    }
+    if (!openingTime.contains(':') || !closingTime.contains(':')) {
+      debugPrint('Invalid store hours format');
+      return true;
+    }
+
+    try {
+      final now = DateTime.now();
+      final nowMinutes = now.hour * 60 + now.minute;
+
+      final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      final openMinutes = openHour * 60 + openMinute;
+
+      final closeParts = closingTime.split(':');
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      final closeMinutes = closeHour * 60 + closeMinute;
+
+      debugPrint(
+        'Now: $nowMinutes min, Open: $openMinutes min, Close: $closeMinutes min',
+      );
+
+      // Handle overnight hours (e.g., 22:00 - 02:00)
+      if (closeMinutes <= openMinutes) {
+        final isOpen = nowMinutes >= openMinutes || nowMinutes < closeMinutes;
+        debugPrint('Overnight hours - isOpen: $isOpen');
+        return isOpen;
+      }
+
+      final isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+      debugPrint('Normal hours - isOpen: $isOpen');
+      return isOpen;
+    } catch (e) {
+      debugPrint('Error parsing store hours: $e');
+      return true; // Default to open if parsing fails
+    }
+  }
+
   Future<void> _placeOrder({
     required String uid,
     required List<QueryDocumentSnapshot> cartDocs,
@@ -500,6 +548,48 @@ class _CartPageState extends State<CartPage> {
 
       if (storeId.isEmpty) {
         throw Exception("Missing storeId in cart items.");
+      }
+
+      // Check if store is currently open
+      final storeDoc =
+          await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(storeId)
+              .get();
+
+      if (!storeDoc.exists) {
+        if (!mounted) return;
+        setState(() => _placing = false);
+        await AppModalDialog.error(
+          context: context,
+          title: 'Store Not Found',
+          message: 'This store no longer exists.',
+        );
+        return;
+      }
+
+      final storeData = storeDoc.data() as Map<String, dynamic>;
+      final openingTime = storeData['openingTime']?.toString();
+      final closingTime = storeData['closingTime']?.toString();
+
+      debugPrint(
+        'Store hours check - Opening: $openingTime, Closing: $closingTime',
+      );
+      debugPrint(
+        'Current time: ${TimeOfDay.now().hour}:${TimeOfDay.now().minute}',
+      );
+      debugPrint('Is store open: ${_isStoreOpen(openingTime, closingTime)}');
+
+      if (!_isStoreOpen(openingTime, closingTime)) {
+        if (!mounted) return;
+        setState(() => _placing = false);
+        await AppModalDialog.error(
+          context: context,
+          title: 'Store Closed',
+          message:
+              '$storeName is currently closed. Please try again during operating hours.',
+        );
+        return;
       }
 
       final orderId = await OrderService().placeOrder(

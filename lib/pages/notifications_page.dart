@@ -8,10 +8,28 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
   String get _uid => FirebaseAuth.instance.currentUser!.uid;
+
+  Future<void> _deleteReadNotifications() async {
+    final count = await NotificationService.deleteAllReadNotifications(_uid);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Deleted $count read notification${count == 1 ? '' : 's'}',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +56,54 @@ class NotificationsPage extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => NotificationService.markAllAsRead(_uid),
-            child: Text(
-              'Mark all read',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? AppColors.primaryLight : AppColors.primary,
-              ),
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_vert,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
             ),
+            onSelected: (value) {
+              switch (value) {
+                case 'mark_read':
+                  NotificationService.markAllAsRead(_uid);
+                  break;
+                case 'delete_read':
+                  _deleteReadNotifications();
+                  break;
+              }
+            },
+            itemBuilder:
+                (context) => [
+                  PopupMenuItem(
+                    value: 'mark_read',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Iconsax.tick_circle,
+                          size: 20,
+                          color:
+                              isDark
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                        const SizedBox(width: 12),
+                        Text('Mark all as read'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete_read',
+                    child: Row(
+                      children: [
+                        Icon(Iconsax.trash, size: 20, color: AppColors.error),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Delete all read',
+                          style: TextStyle(color: AppColors.error),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
           ),
         ],
       ),
@@ -73,15 +130,56 @@ class NotificationsPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final doc = notifications[index];
               final data = doc.data() as Map<String, dynamic>;
-              return _NotificationTile(
-                notificationId: doc.id,
-                title: data['title'] ?? 'Notification',
-                body: data['body'] ?? '',
-                isRead: data['read'] ?? false,
-                createdAt: data['createdAt'] as Timestamp?,
-                type: data['type'] ?? 'general',
-                isDark: isDark,
-                userId: _uid,
+              final isRead = data['read'] ?? false;
+
+              return Dismissible(
+                key: Key(doc.id),
+                direction: DismissDirection.endToStart,
+                background: Container(
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.only(right: 20),
+                  color: AppColors.error,
+                  child: const Icon(Iconsax.trash, color: Colors.white),
+                ),
+                confirmDismiss: (direction) async {
+                  return await showDialog<bool>(
+                        context: context,
+                        builder:
+                            (ctx) => AlertDialog(
+                              title: const Text('Delete Notification'),
+                              content: const Text(
+                                'Are you sure you want to delete this notification?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: AppColors.error,
+                                  ),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                      ) ??
+                      false;
+                },
+                onDismissed: (direction) {
+                  NotificationService.deleteNotification(_uid, doc.id);
+                },
+                child: _NotificationTile(
+                  notificationId: doc.id,
+                  title: data['title'] ?? 'Notification',
+                  body: data['body'] ?? '',
+                  isRead: isRead,
+                  createdAt: data['createdAt'] as Timestamp?,
+                  type: data['type'] ?? 'general',
+                  isDark: isDark,
+                  userId: _uid,
+                ),
               );
             },
           );

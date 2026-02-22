@@ -63,18 +63,34 @@ class _LocationGuardState extends State<LocationGuard> {
       // Load geofence settings from Firestore
       final cfg =
           await FirebaseFirestore.instance
-              .collection('config')
-              .doc('app')
+              .collection('settings')
+              .doc('geofence')
               .get();
+
       if (!cfg.exists) {
+        // No geofence settings configured - allow access
+        debugPrint(
+          '[LocationGuard] No geofence settings found - allowing access',
+        );
         setState(() {
-          _error = "Missing Firestore /config/app document.";
+          _inside = true;
           _loading = false;
         });
         return;
       }
 
       _cfg = cfg.data();
+
+      // Check if geofence is enabled
+      final isGeofenceEnabled = _cfg?['enabled'] ?? false;
+      if (!isGeofenceEnabled) {
+        debugPrint('[LocationGuard] Geofence is disabled - allowing access');
+        setState(() {
+          _inside = true;
+          _loading = false;
+        });
+        return;
+      }
 
       // Ensure permissions (if not mock mode)
       if (!widget.useMock) {
@@ -162,12 +178,10 @@ class _LocationGuardState extends State<LocationGuard> {
         );
       }
 
-      // ✅ Use Firestore config (school location)
-      final center = (_cfg?['schoolCenter'] ?? {}) as Map<String, dynamic>;
-      double radius = (_cfg?['radiusMeters'] ?? 100.0).toDouble();
-
-      final lat = (center['lat'] ?? 0).toDouble();
-      final lng = (center['lng'] ?? 0).toDouble();
+      // ✅ Use Firestore settings (campus geofence)
+      double lat = (_cfg?['latitude'] ?? 0).toDouble();
+      double lng = (_cfg?['longitude'] ?? 0).toDouble();
+      double radius = (_cfg?['radius'] ?? 500.0).toDouble();
 
       // ✅ Allow wide radius in mock mode to avoid blocking while testing
       if (widget.useMock) {
