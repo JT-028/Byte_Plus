@@ -223,6 +223,72 @@ class NotificationService {
     await batch.commit();
   }
 
+  /// Send notification to merchant when a new order is placed
+  static Future<void> sendNewOrderNotification({
+    required String storeId,
+    required String storeName,
+    required String orderId,
+    required String queueNo,
+    required double total,
+    required String customerName,
+  }) async {
+    try {
+      // Find the merchant(s) associated with this store
+      final merchantsQuery =
+          await _firestore
+              .collection('users')
+              .where('storeId', isEqualTo: storeId)
+              .where('role', isEqualTo: 'staff')
+              .get();
+
+      if (merchantsQuery.docs.isEmpty) {
+        debugPrint('No merchants found for store: $storeId');
+        return;
+      }
+
+      final title = '🛒 New Order #$queueNo';
+      final body =
+          'New order from ${customerName.isNotEmpty ? customerName : 'Customer'} - ₱${total.toStringAsFixed(2)}';
+
+      // Send notification to each merchant
+      for (final merchantDoc in merchantsQuery.docs) {
+        final merchantId = merchantDoc.id;
+
+        // Store in user's notifications subcollection for in-app display
+        await _firestore
+            .collection('users')
+            .doc(merchantId)
+            .collection('notifications')
+            .add({
+              'type': 'new_order',
+              'orderId': orderId,
+              'storeId': storeId,
+              'queueNo': queueNo,
+              'title': title,
+              'body': body,
+              'read': false,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
+
+        // Store notification request for Cloud Function to process push
+        await _firestore.collection('notifications').add({
+          'type': 'new_order',
+          'orderId': orderId,
+          'storeId': storeId,
+          'userId': merchantId,
+          'queueNo': queueNo,
+          'title': title,
+          'body': body,
+          'read': false,
+          'sent': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Error sending new order notification: $e');
+    }
+  }
+
   /// Get notifications stream for in-app notifications list
   static Stream<QuerySnapshot> getNotificationsStream(String userId) {
     return _firestore

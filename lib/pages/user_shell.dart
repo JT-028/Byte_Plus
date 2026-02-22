@@ -8,6 +8,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/order_service.dart';
 import '../services/cart_service.dart';
+import '../services/notification_service.dart';
 import '../utils/responsive_utils.dart';
 import '../widgets/app_modal_dialog.dart';
 import '../widgets/pickup_time_picker.dart';
@@ -15,6 +16,7 @@ import 'store_page.dart';
 import 'product_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
+import 'notifications_page.dart';
 
 class UserShell extends StatefulWidget {
   const UserShell({super.key});
@@ -265,6 +267,67 @@ class _UserShellState extends State<UserShell>
                 ),
               ),
               const SizedBox(width: 12),
+              // Notification bell
+              StreamBuilder<int>(
+                stream: NotificationService.getUnreadCount(uid),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  return GestureDetector(
+                    onTap:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsPage(),
+                          ),
+                        ),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Icon(
+                              Iconsax.notification,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 16,
+                                  minHeight: 16,
+                                ),
+                                child: Text(
+                                  unreadCount > 9 ? '9+' : '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),

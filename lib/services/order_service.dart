@@ -2,6 +2,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'notification_service.dart';
+
 class OrderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -109,6 +111,16 @@ class OrderService {
     );
 
     await batch.commit();
+
+    // Notify merchant of new order
+    NotificationService.sendNewOrderNotification(
+      storeId: storeId,
+      storeName: storeName,
+      orderId: orderDocId,
+      queueNo: queueNo,
+      total: total,
+      customerName: user.displayName ?? '',
+    );
 
     return queueNo;
   }

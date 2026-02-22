@@ -12,6 +12,7 @@ import '../services/order_archival_service.dart';
 import '../widgets/app_modal_dialog.dart';
 import 'printer_settings_page.dart';
 import 'order_reports_page.dart';
+import 'notifications_page.dart';
 
 class MerchantOrdersPage extends StatefulWidget {
   const MerchantOrdersPage({super.key});
@@ -178,6 +179,53 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   color: isConnected ? Colors.greenAccent : Colors.white,
                 ),
                 tooltip: 'Printer Settings',
+              );
+            },
+          ),
+          // Notification bell
+          StreamBuilder<int>(
+            stream: NotificationService.getUnreadCount(merchantUid),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed:
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsPage(),
+                          ),
+                        ),
+                    icon: const Icon(Iconsax.notification, color: Colors.white),
+                    tooltip: 'Notifications',
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          unreadCount > 9 ? '9+' : '$unreadCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               );
             },
           ),

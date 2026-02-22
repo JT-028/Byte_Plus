@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
 import 'services/theme_service.dart';
+import 'services/notification_service.dart';
 
 // Screens
 import 'pages/splash_page.dart';
@@ -24,10 +25,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // FCM setup
-  final messaging = FirebaseMessaging.instance;
-  await messaging.requestPermission(alert: true, badge: true, sound: true);
+  // FCM background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialize notification service (handles permissions + local notifications)
+  await NotificationService.initialize();
 
   // Initialize theme service
   final themeService = ThemeService();
@@ -36,34 +38,15 @@ Future<void> main() async {
   runApp(MyApp(themeService: themeService));
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   final ThemeService themeService;
 
   const MyApp({super.key, required this.themeService});
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  void _initForegroundFCM() {
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // ignore: avoid_print
-      print(
-        "🔔 FG: ${message.notification?.title} - ${message.notification?.body}",
-      );
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initForegroundFCM();
-  }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
-      value: widget.themeService,
+      value: themeService,
       child: Consumer<ThemeService>(
         builder: (context, themeService, child) {
           return MaterialApp(

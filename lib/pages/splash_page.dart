@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:lottie/lottie.dart';
 
 import '../theme/app_theme.dart';
+import '../services/notification_service.dart';
 import 'login_page.dart';
 import 'user_shell.dart';
 import 'merchant_shell.dart';
@@ -56,17 +57,7 @@ class _SplashPageState extends State<SplashPage>
 
   /// Save FCM token to user's Firestore document for push notifications
   Future<void> _saveFcmToken(String uid) async {
-    try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token == null) return;
-
-      await FirebaseFirestore.instance.collection('users').doc(uid).set({
-        'fcmToken': token,
-      }, SetOptions(merge: true));
-    } catch (e) {
-      // Silently fail - FCM is not critical
-      debugPrint('Failed to save FCM token: $e');
-    }
+    await NotificationService.saveFcmToken(uid);
   }
 
   Future<void> _checkAuthState() async {

@@ -43,3 +43,32 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase Functions
+functions/node_modules/
+functions/.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+.firebaserc
+
+# Firebase secrets (keep these private)
+/lib/firebase_options.dart
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/ios/firebase_app_id_file.json
+
+# Documentation and notes (personal/generated)
+*.md
+NOTIFICATIONS.md
+
+# Debug/test files
+*.log
+*.png
+debug_*.dart
+delete_*.dart
+
+# Local configuration
+*.local
+.env
+.env.*
