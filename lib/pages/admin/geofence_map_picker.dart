@@ -31,6 +31,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
   late double _radius;
   final _searchController = TextEditingController();
   bool _isLoading = false;
+  bool _mapReady = false;
 
   // Default to Systems Plus College, Balibago, Angeles City, Pampanga
   static const _defaultLat = 15.1350;
@@ -45,11 +46,18 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
       widget.initialLng ?? _defaultLng,
     );
     _radius = widget.initialRadius;
+
+    // Mark map as ready after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _mapReady = true;
+    });
   }
 
   @override
   void dispose() {
+    _mapReady = false;
     _searchController.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -68,7 +76,10 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
       });
-      _mapController.move(_selectedLocation, 17);
+
+      if (mounted && _mapReady) {
+        _mapController.move(_selectedLocation, 17);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -215,61 +226,46 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
                   ],
                 ),
 
-                // Current location button
+                // Map controls - aligned to top right
                 Positioned(
                   right: 16,
-                  bottom: 200,
-                  child: FloatingActionButton.small(
-                    heroTag: 'location',
-                    backgroundColor:
-                        isDark ? AppColors.surfaceDark : Colors.white,
-                    onPressed: _isLoading ? null : _getCurrentLocation,
-                    child:
-                        _isLoading
-                            ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                              ),
-                            )
-                            : Icon(Iconsax.gps, color: AppColors.primary),
-                  ),
-                ),
-
-                // Zoom controls
-                Positioned(
-                  right: 16,
-                  bottom: 120,
+                  top: 16,
                   child: Column(
                     children: [
-                      FloatingActionButton.small(
-                        heroTag: 'zoomIn',
-                        backgroundColor:
-                            isDark ? AppColors.surfaceDark : Colors.white,
-                        onPressed: () {
+                      // GPS button
+                      _mapButton(
+                        icon: Iconsax.gps,
+                        onTap: _isLoading ? null : _getCurrentLocation,
+                        isDark: isDark,
+                        isLoading: _isLoading,
+                      ),
+                      const SizedBox(height: 8),
+                      // Zoom in
+                      _mapButton(
+                        icon: Iconsax.add,
+                        onTap: () {
+                          if (!_mapReady) return;
                           final currentZoom = _mapController.camera.zoom;
                           _mapController.move(
                             _selectedLocation,
                             currentZoom + 1,
                           );
                         },
-                        child: Icon(Icons.add, color: AppColors.primary),
+                        isDark: isDark,
                       ),
                       const SizedBox(height: 8),
-                      FloatingActionButton.small(
-                        heroTag: 'zoomOut',
-                        backgroundColor:
-                            isDark ? AppColors.surfaceDark : Colors.white,
-                        onPressed: () {
+                      // Zoom out
+                      _mapButton(
+                        icon: Iconsax.minus,
+                        onTap: () {
+                          if (!_mapReady) return;
                           final currentZoom = _mapController.camera.zoom;
                           _mapController.move(
                             _selectedLocation,
                             currentZoom - 1,
                           );
                         },
-                        child: Icon(Icons.remove, color: AppColors.primary),
+                        isDark: isDark,
                       ),
                     ],
                   ),
@@ -457,6 +453,48 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _mapButton({
+    required IconData icon,
+    required VoidCallback? onTap,
+    required bool isDark,
+    bool isLoading = false,
+  }) {
+    return Material(
+      color: isDark ? AppColors.surfaceDark : Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      elevation: 2,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+          child:
+              isLoading
+                  ? Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  )
+                  : Icon(
+                    icon,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    size: 20,
+                  ),
+        ),
       ),
     );
   }

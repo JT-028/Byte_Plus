@@ -23,6 +23,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
   bool _isEnabled = false;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _mapReady = false;
 
   // Default to Systems Plus College, Balibago, Angeles City, Pampanga
   static const _defaultLat = 15.1350;
@@ -33,6 +34,13 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
     super.initState();
     _mapController = MapController();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _mapReady = false;
+    _mapController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -57,8 +65,10 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
         });
       }
 
-      // Always move map - to saved location if exists, otherwise to Systems Plus College
+      // Mark map as ready after a brief delay to ensure it's initialized
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _mapReady = true;
         _mapController.move(
           _selectedLocation ?? LatLng(_defaultLat, _defaultLng),
           15,
@@ -72,6 +82,8 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
       }
       // Even on error, center on default location
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _mapReady = true;
         _mapController.move(LatLng(_defaultLat, _defaultLng), 15);
       });
     } finally {
@@ -140,7 +152,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
         _selectedLocation = LatLng(position.latitude, position.longitude);
       });
 
-      if (mounted) {
+      if (mounted && _mapReady) {
         _mapController.move(_selectedLocation!, 15);
       }
     } catch (e) {
@@ -398,23 +410,25 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                   ),
                 ),
 
-              // Map controls
+              // Map controls - aligned to right side
               Positioned(
                 right: 16,
-                top: _selectedLocation == null ? 80 : 16,
+                top: 16,
                 child: Column(
                   children: [
                     // GPS button
                     _mapButton(
                       icon: Iconsax.gps,
-                      onTap: _getCurrentLocation,
+                      onTap: _isLoading ? null : _getCurrentLocation,
                       isDark: isDark,
+                      isLoading: _isLoading,
                     ),
                     const SizedBox(height: 8),
                     // Zoom in
                     _mapButton(
                       icon: Iconsax.add,
                       onTap: () {
+                        if (!_mapReady) return;
                         _mapController.move(
                           _mapController.camera.center,
                           _mapController.camera.zoom + 1,
@@ -427,6 +441,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                     _mapButton(
                       icon: Iconsax.minus,
                       onTap: () {
+                        if (!_mapReady) return;
                         _mapController.move(
                           _mapController.camera.center,
                           _mapController.camera.zoom - 1,
@@ -581,8 +596,9 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
 
   Widget _mapButton({
     required IconData icon,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
     required bool isDark,
+    bool isLoading = false,
   }) {
     return Material(
       color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -595,11 +611,26 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: Icon(
-            icon,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-            size: 20,
-          ),
+          child:
+              isLoading
+                  ? Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  )
+                  : Icon(
+                    icon,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    size: 20,
+                  ),
         ),
       ),
     );
