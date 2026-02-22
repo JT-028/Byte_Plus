@@ -19,6 +19,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   String searchQuery = '';
   String selectedRoleFilter = 'All';
   final searchController = TextEditingController();
+  bool _isCreatingUser = false; // Flag to pause stream during user creation
 
   final roles = ['All', 'student', 'staff', 'admin'];
 
@@ -164,6 +165,37 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               .orderBy('name')
               .snapshots(),
       builder: (context, snap) {
+        // During user creation, show loading to avoid permission errors
+        if (_isCreatingUser) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Handle stream errors (e.g., permission denied during auth switch)
+        if (snap.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Iconsax.warning_2,
+                  size: 48,
+                  color: isDark ? AppColors.textTertiaryDark : Colors.grey,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading users...',
+                  style: TextStyle(
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -556,6 +588,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         return; // User cancelled
       }
 
+      // Set flag to pause StreamBuilder during auth switch
+      setState(() => _isCreatingUser = true);
+
       // Show full-screen loading overlay to block all StreamBuilders during auth switch
       _showLoadingOverlay(isDark, 'Creating user account...');
 
@@ -599,8 +634,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           password: adminPassword,
         );
 
-        // Dismiss loading overlay
-        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+        // Dismiss loading overlay and reset flag
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          setState(() => _isCreatingUser = false);
+        }
 
         if (mounted) {
           await AppModalDialog.success(
@@ -610,8 +648,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } on FirebaseAuthException catch (e) {
-        // Dismiss loading overlay
-        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+        // Dismiss loading overlay and reset flag
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          setState(() => _isCreatingUser = false);
+        }
 
         // Try to re-sign in admin if something went wrong
         await _tryReauthenticateAdmin();
@@ -624,8 +665,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           );
         }
       } catch (e) {
-        // Dismiss loading overlay
-        if (mounted) Navigator.of(context, rootNavigator: true).pop();
+        // Dismiss loading overlay and reset flag
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+          setState(() => _isCreatingUser = false);
+        }
 
         // Try to re-sign in admin if something went wrong
         await _tryReauthenticateAdmin();
