@@ -186,46 +186,6 @@ class _MerchantShellState extends State<MerchantShell> {
         },
       ),
       actions: [
-        // Reports button
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const OrderReportsPage()),
-            );
-          },
-          icon: Icon(
-            Iconsax.document_text,
-            color: isDark ? AppColors.textPrimaryDark : Colors.white,
-          ),
-          tooltip: 'Order Reports',
-        ),
-        // Printer settings button
-        StreamBuilder<PrinterStatus>(
-          stream: _printerService.statusStream,
-          initialData: _printerService.status,
-          builder: (context, snapshot) {
-            final isConnected = snapshot.data == PrinterStatus.connected;
-            return IconButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PrinterSettingsPage(),
-                  ),
-                );
-              },
-              icon: Icon(
-                Iconsax.printer,
-                color:
-                    isConnected
-                        ? Colors.greenAccent
-                        : (isDark ? AppColors.textPrimaryDark : Colors.white),
-              ),
-              tooltip: 'Printer Settings',
-            );
-          },
-        ),
         // Notification bell
         StreamBuilder<int>(
           stream: NotificationService.getUnreadCount(_user.uid),
@@ -510,22 +470,6 @@ class _MerchantShellState extends State<MerchantShell> {
                 );
               },
             ),
-
-            const Spacer(),
-
-            // Logout
-            Divider(color: isDark ? AppColors.borderDark : AppColors.border),
-            ListTile(
-              leading: const Icon(Iconsax.logout, color: AppColors.error),
-              title: const Text(
-                'Logout',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              onTap: _logout,
-            ),
             const SizedBox(height: 12),
           ],
         ),
@@ -670,9 +614,7 @@ class _MerchantShellState extends State<MerchantShell> {
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 36),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _navItem(icon: Icons.receipt_long, index: 0, isDark: isDark),
           _navItem(icon: Icons.shopping_bag_outlined, index: 1, isDark: isDark),
@@ -689,17 +631,24 @@ class _MerchantShellState extends State<MerchantShell> {
     required bool isDark,
   }) {
     final active = selectedNav == index;
-    return GestureDetector(
-      onTap: () => setState(() => selectedNav = index),
-      child: Icon(
-        icon,
-        size: 24,
-        color:
-            active
-                ? AppColors.primary
-                : (isDark
-                    ? AppColors.textTertiaryDark
-                    : AppColors.textTertiary),
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => selectedNav = index),
+        child: Container(
+          height: double.infinity,
+          alignment: Alignment.center,
+          child: Icon(
+            icon,
+            size: 24,
+            color:
+                active
+                    ? AppColors.primary
+                    : (isDark
+                        ? AppColors.textTertiaryDark
+                        : AppColors.textTertiary),
+          ),
+        ),
       ),
     );
   }

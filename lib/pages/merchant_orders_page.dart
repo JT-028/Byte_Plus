@@ -103,31 +103,19 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
   }
 
   Widget _page(String storeId, bool isDark) {
-    return Column(
-      children: [
-        _topHeader(isDark, storeId),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.backgroundDark : Colors.white,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                _ordersTitle(storeId, isDark),
-                const SizedBox(height: 12),
-                _tabsRow(isDark),
-                const SizedBox(height: 8),
-                Expanded(child: _ordersList(storeId, isDark)),
-              ],
-            ),
-          ),
-        ),
-      ],
+    return Container(
+      color: isDark ? AppColors.backgroundDark : Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 16),
+          _ordersTitle(storeId, isDark),
+          const SizedBox(height: 12),
+          _tabsRow(isDark),
+          const SizedBox(height: 8),
+          Expanded(child: _ordersList(storeId, isDark)),
+        ],
+      ),
     );
   }
 
