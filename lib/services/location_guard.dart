@@ -231,12 +231,70 @@ class _LocationGuardState extends State<LocationGuard> {
     }
 
     if (!_inside) {
-      return const Scaffold(
-        body: Center(
-          child: Text(
-            "🚫 You are outside the allowed area.\nAccess restricted.",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18, color: Colors.red),
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Scaffold(
+        backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Lottie animation
+                Lottie.asset(
+                  'assets/animation/restricted.json',
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
+                  repeat: true,
+                ),
+                const SizedBox(height: 32),
+                // Title
+                Text(
+                  'Access Restricted',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                // Description
+                Text(
+                  'You are outside the allowed campus area. Please move within the campus boundary to access the app.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                // Retry button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() => _loading = true);
+                      _checkLocation().then((_) {
+                        setState(() => _loading = false);
+                      });
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Check Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
