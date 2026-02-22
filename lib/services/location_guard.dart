@@ -255,7 +255,10 @@ class _LocationGuardState extends State<LocationGuard> {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                    color:
+                        isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -265,7 +268,10 @@ class _LocationGuardState extends State<LocationGuard> {
                   'You are outside the allowed campus area. Please move within the campus boundary to access the app.',
                   style: TextStyle(
                     fontSize: 16,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    color:
+                        isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
