@@ -244,12 +244,12 @@ class _LocationGuardState extends State<LocationGuard> {
                 // Lottie animation
                 Lottie.asset(
                   'assets/animation/restricted.json',
-                  width: 200,
-                  height: 200,
+                  width: 160,
+                  height: 160,
                   fit: BoxFit.cover,
                   repeat: true,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 34),
                 // Title
                 Text(
                   'Access Restricted',

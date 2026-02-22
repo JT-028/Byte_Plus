@@ -63,7 +63,8 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: 
+      if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     // ==================== CONFIG ====================
