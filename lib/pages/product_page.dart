@@ -27,6 +27,10 @@ class _ProductPageState extends State<ProductPage> {
   Map<String, dynamic>? _productData;
   bool _isLoading = true;
 
+  // Store info
+  String _storeName = '';
+  String _storeLogo = '';
+
   // Selected variation (e.g., Small, Large)
   int? _selectedVariationIndex;
   double _selectedVariationPrice = 0;
@@ -55,6 +59,19 @@ class _ProductPageState extends State<ProductPage> {
   }
 
   Future<void> _loadProduct() async {
+    // Fetch store info for storeName and storeLogo
+    final storeSnap =
+        await FirebaseFirestore.instance
+            .collection("stores")
+            .doc(widget.storeId)
+            .get();
+
+    if (storeSnap.exists) {
+      final storeData = storeSnap.data() as Map<String, dynamic>;
+      _storeName = (storeData['name'] ?? '').toString();
+      _storeLogo = (storeData['logoUrl'] ?? '').toString();
+    }
+
     final snap =
         await FirebaseFirestore.instance
             .collection("stores")
@@ -260,6 +277,8 @@ class _ProductPageState extends State<ProductPage> {
     if (!merged) {
       await cartRef.add({
         "storeId": widget.storeId,
+        "storeName": _storeName,
+        "storeLogo": _storeLogo,
         "productId": widget.productId,
         "productName": _productData!["name"],
         "imageUrl": _productData!["imageUrl"],

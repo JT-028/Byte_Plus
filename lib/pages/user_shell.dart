@@ -1080,8 +1080,51 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   String get uid => FirebaseAuth.instance.currentUser!.uid;
 
-  bool pickupNow = true;
-  DateTime? pickupTime;
+  // Per-store pickup settings
+  final Map<String, bool> _pickupNowMap = {};
+  final Map<String, DateTime?> _pickupTimeMap = {};
+
+  // Cache for store info (fetched from Firestore when missing from cart items)
+  final Map<String, Map<String, String>> _storeInfoCache = {};
+
+  bool _getPickupNow(String storeId) => _pickupNowMap[storeId] ?? true;
+  DateTime? _getPickupTime(String storeId) => _pickupTimeMap[storeId];
+
+  void _setPickupNow(String storeId, bool value) {
+    setState(() {
+      _pickupNowMap[storeId] = value;
+      if (value) _pickupTimeMap[storeId] = null;
+    });
+  }
+
+  void _setPickupTime(String storeId, DateTime? time) {
+    setState(() {
+      _pickupTimeMap[storeId] = time;
+      if (time != null) _pickupNowMap[storeId] = false;
+    });
+  }
+
+  // Fetch store info and cache it
+  Future<Map<String, String>> _fetchStoreInfo(String storeId) async {
+    if (_storeInfoCache.containsKey(storeId)) {
+      return _storeInfoCache[storeId]!;
+    }
+
+    final storeDoc =
+        await FirebaseFirestore.instance
+            .collection("stores")
+            .doc(storeId)
+            .get();
+
+    final data = storeDoc.data();
+    final info = {
+      'name': (data?['name'] ?? storeId).toString(),
+      'logo': (data?['logoUrl'] ?? '').toString(),
+    };
+
+    _storeInfoCache[storeId] = info;
+    return info;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1134,8 +1177,6 @@ class _CartPageState extends State<CartPage> {
                                     : AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        _pickupSection(isDark),
                         const SizedBox(height: 20),
                         _orderDetailsSection(docs, isDark),
                       ],
@@ -1230,7 +1271,10 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _pickupSection(bool isDark) {
+  Widget _pickupSection(String storeId, bool isDark) {
+    final pickupNow = _getPickupNow(storeId);
+    final pickupTime = _getPickupTime(storeId);
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : const Color(0xFFF7F7F7),
@@ -1270,12 +1314,7 @@ class _CartPageState extends State<CartPage> {
             subtitle: "Estimated ready in 5–10 mins.",
             selected: pickupNow,
             isDark: isDark,
-            onTap: () {
-              setState(() {
-                pickupNow = true;
-                pickupTime = null;
-              });
-            },
+            onTap: () => _setPickupNow(storeId, true),
           ),
           const SizedBox(height: 10),
           _pickupOption(
@@ -1283,7 +1322,7 @@ class _CartPageState extends State<CartPage> {
             subtitle:
                 pickupTime == null
                     ? "Set your pick up time."
-                    : "Scheduled: ${pickupTime!.hour.toString().padLeft(2, '0')}:${pickupTime!.minute.toString().padLeft(2, '0')}",
+                    : "Scheduled: ${pickupTime.hour.toString().padLeft(2, '0')}:${pickupTime.minute.toString().padLeft(2, '0')}",
             selected: !pickupNow,
             isDark: isDark,
             trailing: Icon(
@@ -1302,10 +1341,7 @@ class _CartPageState extends State<CartPage> {
                     DateTime.now().add(const Duration(minutes: 30)),
               );
               if (dt != null) {
-                setState(() {
-                  pickupNow = false;
-                  pickupTime = dt;
-                });
+                _setPickupTime(storeId, dt);
               }
             },
           ),
@@ -1391,6 +1427,27 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _orderDetailsSection(List<QueryDocumentSnapshot> docs, bool isDark) {
+    // Group items by store
+    final Map<String, List<QueryDocumentSnapshot>> storeGroups = {};
+    final Map<String, String> storeNames = {};
+    final Map<String, String> storeLogos = {};
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final storeId = (data['storeId'] ?? '').toString();
+      final storeName = (data['storeName'] ?? storeId).toString();
+      final storeLogo = (data['storeLogo'] ?? '').toString();
+
+      if (!storeGroups.containsKey(storeId)) {
+        storeGroups[storeId] = [];
+        storeNames[storeId] = storeName;
+        storeLogos[storeId] = storeLogo;
+      }
+      storeGroups[storeId]!.add(doc);
+    }
+
+    final storeIds = storeGroups.keys.toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1451,20 +1508,139 @@ class _CartPageState extends State<CartPage> {
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : const Color(0xFFF7F7F7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+        // Group items by store
+        ...storeIds.map((storeId) {
+          final cartStoreName = storeNames[storeId] ?? '';
+          final cartStoreLogo = storeLogos[storeId] ?? '';
+          final storeItems = storeGroups[storeId]!;
+
+          // Calculate store subtotal
+          double storeTotal = 0;
+          for (var item in storeItems) {
+            final d = item.data() as Map<String, dynamic>;
+            final lt = d['lineTotal'];
+            if (lt is num) storeTotal += lt.toDouble();
+          }
+
+          // Check if storeName is missing or looks like a store ID (20+ chars and alphanumeric)
+          final needsFetch =
+              cartStoreName.isEmpty ||
+              cartStoreName == storeId ||
+              (cartStoreName.length >= 20 &&
+                  RegExp(r'^[a-zA-Z0-9]+$').hasMatch(cartStoreName));
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Store Header with FutureBuilder if name needs fetching
+              needsFetch
+                  ? FutureBuilder<Map<String, String>>(
+                    future: _fetchStoreInfo(storeId),
+                    builder: (context, snapshot) {
+                      final storeName = snapshot.data?['name'] ?? storeId;
+                      final storeLogo = snapshot.data?['logo'] ?? '';
+                      return _buildStoreHeader(
+                        storeName,
+                        storeLogo,
+                        storeTotal,
+                        isDark,
+                      );
+                    },
+                  )
+                  : _buildStoreHeader(
+                    cartStoreName,
+                    cartStoreLogo,
+                    storeTotal,
+                    isDark,
+                  ),
+              // Pickup Time Section for this store
+              _pickupSection(storeId, isDark),
+              const SizedBox(height: 12),
+              // Store Items Container
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color:
+                      isDark ? AppColors.surfaceDark : const Color(0xFFF7F7F7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Column(
+                  children: storeItems.map((d) => _cartRow(d, isDark)).toList(),
+                ),
+              ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildStoreHeader(
+    String storeName,
+    String storeLogo,
+    double storeTotal,
+    bool isDark,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color:
+            isDark
+                ? AppColors.primaryLight.withOpacity(0.15)
+                : AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          if (storeLogo.isNotEmpty)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.network(
+                storeLogo,
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (_, __, ___) => Icon(
+                      Icons.store,
+                      size: 20,
+                      color:
+                          isDark ? AppColors.primaryLight : AppColors.primary,
+                    ),
+              ),
+            )
+          else
+            Icon(
+              Icons.store,
+              size: 20,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              storeName,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.primaryLight : AppColors.primary,
+              ),
             ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            children: docs.map((d) => _cartRow(d, isDark)).toList(),
+          Text(
+            "₱ ${storeTotal.toStringAsFixed(0)}",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1474,6 +1650,8 @@ class _CartPageState extends State<CartPage> {
     final imageUrl = data['imageUrl'] ?? '';
     final qty = (data['quantity'] as num).toInt();
     final lineTotal = (data['lineTotal'] as num).toDouble();
+    final storeId = (data['storeId'] ?? '').toString();
+    final productId = (data['productId'] ?? '').toString();
 
     // Build subtitle supporting both new and legacy cart item structures
     final parts = <String>[];
@@ -1509,147 +1687,163 @@ class _CartPageState extends State<CartPage> {
 
     final unitPrice = qty > 0 ? (lineTotal / qty) : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              imageUrl,
-              width: 52,
-              height: 52,
-              fit: BoxFit.cover,
-              errorBuilder:
-                  (_, __, ___) => Container(
-                    width: 52,
-                    height: 52,
-                    color: isDark ? AppColors.borderDark : Colors.grey.shade200,
-                    child: Icon(
-                      Iconsax.image,
-                      size: 24,
+    return GestureDetector(
+      onTap: () {
+        // Navigate to product detail page
+        if (storeId.isNotEmpty && productId.isNotEmpty) {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (_) => ProductPage(storeId: storeId, productId: productId),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceVariantDark : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: 52,
+                height: 52,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (_, __, ___) => Container(
+                      width: 52,
+                      height: 52,
                       color:
-                          isDark
-                              ? AppColors.textTertiaryDark
-                              : AppColors.textTertiary,
-                    ),
-                  ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  productName,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
+                          isDark ? AppColors.borderDark : Colors.grey.shade200,
+                      child: Icon(
+                        Iconsax.image,
+                        size: 24,
                         color:
                             isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary,
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // QUANTITY STEPPER
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isDark ? AppColors.borderDark : Colors.grey.shade300,
               ),
             ),
-            child: Row(
-              children: [
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
                   ),
-                  icon: Icon(
-                    Iconsax.minus,
-                    size: 16,
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
-                  onPressed:
-                      () => CartService.updateQuantity(
-                        itemId: doc.id,
-                        newQuantity: qty - 1,
-                        unitPrice: unitPrice,
+                  if (subtitle.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                       ),
-                ),
-                Text(
-                  qty.toString(),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                IconButton(
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  icon: Icon(
-                    Iconsax.add,
-                    size: 16,
-                    color: isDark ? AppColors.primaryLight : AppColors.primary,
-                  ),
-                  onPressed:
-                      () => CartService.updateQuantity(
-                        itemId: doc.id,
-                        newQuantity: qty + 1,
-                        unitPrice: unitPrice,
-                      ),
-                ),
-              ],
+                    ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
 
-          const SizedBox(width: 12),
-          Text(
-            "\u20b1 ${lineTotal.toStringAsFixed(0)}",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            // QUANTITY STEPPER
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : Colors.grey.shade300,
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    icon: Icon(
+                      Iconsax.minus,
+                      size: 16,
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
+                    onPressed:
+                        () => CartService.updateQuantity(
+                          itemId: doc.id,
+                          newQuantity: qty - 1,
+                          unitPrice: unitPrice,
+                        ),
+                  ),
+                  Text(
+                    qty.toString(),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    icon: Icon(
+                      Iconsax.add,
+                      size: 16,
+                      color:
+                          isDark ? AppColors.primaryLight : AppColors.primary,
+                    ),
+                    onPressed:
+                        () => CartService.updateQuantity(
+                          itemId: doc.id,
+                          newQuantity: qty + 1,
+                          unitPrice: unitPrice,
+                        ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(width: 12),
+            Text(
+              "\u20b1 ${lineTotal.toStringAsFixed(0)}",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1724,40 +1918,61 @@ class _CartPageState extends State<CartPage> {
                       throw Exception("Cart is empty");
                     }
 
-                    final first = docs.first.data() as Map<String, dynamic>;
+                    // Group items by store
+                    final Map<String, List<Map<String, dynamic>>>
+                    storeItemsMap = {};
+                    for (var doc in docs) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final storeId = (data['storeId'] ?? '').toString();
+                      if (storeId.isEmpty) continue;
 
-                    // ---- SAFE STORE ID ----
-                    final storeId = (first["storeId"] ?? "").toString();
-                    if (storeId.isEmpty) {
-                      throw Exception("Missing storeId in cart item!");
+                      if (!storeItemsMap.containsKey(storeId)) {
+                        storeItemsMap[storeId] = [];
+                      }
+                      storeItemsMap[storeId]!.add(data);
                     }
 
-                    // ---- FETCH STORE NAME SAFELY ----
-                    final storeDoc =
-                        await FirebaseFirestore.instance
-                            .collection("stores")
-                            .doc(storeId)
-                            .get();
+                    // Place order for each store
+                    for (final entry in storeItemsMap.entries) {
+                      final storeId = entry.key;
+                      final items = entry.value;
 
-                    final storeName =
-                        (storeDoc.data()?["name"] ?? "Unknown Store")
-                            .toString();
+                      // Calculate store total
+                      final storeTotal = items.fold<double>(
+                        0,
+                        (sum, item) =>
+                            sum +
+                            ((item['lineTotal'] as num?)?.toDouble() ?? 0),
+                      );
 
-                    // ---- CONVERT ITEMS ----
-                    final List<Map<String, dynamic>> items =
-                        docs
-                            .map((d) => (d.data() as Map<String, dynamic>))
-                            .toList();
+                      // Get store name from items or fetch from Firestore
+                      String storeName =
+                          (items.first['storeName'] ?? '').toString();
+                      if (storeName.isEmpty) {
+                        final storeDoc =
+                            await FirebaseFirestore.instance
+                                .collection("stores")
+                                .doc(storeId)
+                                .get();
+                        storeName =
+                            (storeDoc.data()?["name"] ?? "Unknown Store")
+                                .toString();
+                      }
 
-                    // ---- FINAL ORDER CALL ----
-                    await OrderService().placeOrder(
-                      storeId: storeId,
-                      storeName: storeName,
-                      items: items,
-                      total: total,
-                      pickupNow: pickupNow,
-                      pickupTime: pickupTime,
-                    );
+                      // Get pickup settings for this store
+                      final pickupNow = _getPickupNow(storeId);
+                      final pickupTime = _getPickupTime(storeId);
+
+                      // Place order for this store
+                      await OrderService().placeOrder(
+                        storeId: storeId,
+                        storeName: storeName,
+                        items: items,
+                        total: storeTotal,
+                        pickupNow: pickupNow,
+                        pickupTime: pickupTime,
+                      );
+                    }
 
                     // Clear cart after success
                     await CartService.clearCart();
@@ -1766,7 +1981,10 @@ class _CartPageState extends State<CartPage> {
                     await AppModalDialog.success(
                       context: context,
                       title: 'Order Successful!',
-                      message: 'Your order has been placed successfully.',
+                      message:
+                          storeItemsMap.length > 1
+                              ? '${storeItemsMap.length} orders have been placed successfully.'
+                              : 'Your order has been placed successfully.',
                       primaryLabel: 'OK',
                       onPrimaryPressed: () {
                         Navigator.pop(context);

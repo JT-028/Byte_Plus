@@ -469,7 +469,7 @@ class _EditStorePageState extends State<EditStorePage> {
                       : AppColors.textSecondary,
             ),
           ),
-          activeColor: AppColors.primary,
+          activeThumbColor: AppColors.primary,
           contentPadding: EdgeInsets.zero,
         ),
       ],

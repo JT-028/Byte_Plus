@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
+import 'product_page.dart';
 
 class CartStoreSheet extends StatefulWidget {
   final String storeId;
@@ -126,6 +127,7 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
     final name = data["productName"] ?? "";
     final img = data["imageUrl"] ?? "";
     final price = (data["lineTotal"] ?? 0).toDouble();
+    final productId = (data["productId"] ?? "").toString();
 
     // Build subtitle supporting both new and legacy cart item structures
     final parts = <String>[];
@@ -159,85 +161,102 @@ class _CartStoreSheetState extends State<CartStoreSheet> {
 
     final subtitle = parts.join(' • ');
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceVariantDark : const Color(0xFFF8F8F8),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          // IMAGE
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              img,
-              width: 56,
-              height: 56,
-              fit: BoxFit.cover,
-              errorBuilder:
-                  (_, __, ___) => Icon(
-                    Icons.image,
-                    size: 48,
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to product detail page
+        if (widget.storeId.isNotEmpty && productId.isNotEmpty) {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder:
+                (_) =>
+                    ProductPage(storeId: widget.storeId, productId: productId),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color:
+              isDark ? AppColors.surfaceVariantDark : const Color(0xFFF8F8F8),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            // IMAGE
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                img,
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (_, __, ___) => Icon(
+                      Icons.image,
+                      size: 48,
+                      color:
+                          isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                    ),
+              ),
             ),
-          ),
 
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          // PRODUCT DETAILS
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-                if (subtitle.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      subtitle,
-                      style: TextStyle(
-                        color:
-                            isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
+            // PRODUCT DETAILS
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
                     ),
                   ),
-              ],
+                  if (subtitle.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          color:
+                              isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
 
-          // QTY CONTROLS
-          _qtyController(cartDoc, isDark),
+            // QTY CONTROLS
+            _qtyController(cartDoc, isDark),
 
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
 
-          Text(
-            "₱ ${price.toStringAsFixed(0)}",
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            Text(
+              "₱ ${price.toStringAsFixed(0)}",
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color:
+                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

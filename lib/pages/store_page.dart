@@ -899,35 +899,38 @@ class _StorePageState extends State<StorePage> {
           (sum, d) => sum + ((d["quantity"] ?? 0) as num).toInt(),
         );
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.primaryLight : AppColors.primary,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 16,
-                offset: const Offset(0, -4),
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Colors.transparent,
+              isScrollControlled: true,
+              builder:
+                  (_) => CartStoreSheet(
+                    storeId: widget.storeId,
+                    onGoToCheckout: () {
+                      // Pop store page and return 'goToCart' signal
+                      Navigator.pop(context, 'goToCart');
+                    },
+                  ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.primaryLight : AppColors.primary,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
               ),
-            ],
-          ),
-          child: GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                backgroundColor: Colors.transparent,
-                isScrollControlled: true,
-                builder:
-                    (_) => CartStoreSheet(
-                      storeId: widget.storeId,
-                      onGoToCheckout: () {
-                        // Pop store page and return 'goToCart' signal
-                        Navigator.pop(context, 'goToCart');
-                      },
-                    ),
-              );
-            },
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 Container(
