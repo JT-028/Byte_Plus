@@ -269,6 +269,7 @@ class _PasswordTextFieldState extends State<_PasswordTextField> {
       onChanged: widget.onChanged,
       onSubmitted: widget.onFieldSubmitted,
       validator: widget.validator,
+      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textTertiary),
       suffixIcon: IconButton(
         icon: Icon(
           _isObscured

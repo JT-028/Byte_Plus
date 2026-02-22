@@ -681,6 +681,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   autofocus: true,
                   decoration: InputDecoration(
                     labelText: 'Your Password',
+                    prefixIcon: const Icon(Icons.lock_outline),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
