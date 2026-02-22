@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 import '../theme/app_theme.dart';
@@ -35,8 +36,8 @@ class _LoginPageState extends State<LoginPage> {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
     }
-    if (!value.endsWith('@canteen.spcf.co')) {
-      return 'Please use your school email (@canteen.spcf.co)';
+    if (!value.endsWith('@gmail.com')) {
+      return 'Please use your Gmail address (@gmail.com)';
     }
     return null;
   }
@@ -54,16 +55,40 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
 
     setState(() => _loading = true);
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final userCred = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Check if email is verified
+      if (!userCred.user!.emailVerified) {
+        // Send another verification email
+        await userCred.user!.sendEmailVerification();
+        await FirebaseAuth.instance.signOut();
+
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        AppModalDialog.warning(
+          context: context,
+          title: 'Email Not Verified',
+          message:
+              'Please verify your email before logging in. A new verification link has been sent to $email.',
+        );
+        return;
+      }
+
+      // Update emailVerified status in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCred.user!.uid)
+          .update({'emailVerified': true});
 
       // Navigate to Splash which checks auth and routes to appropriate shell
       if (!mounted) return;
@@ -169,8 +194,8 @@ class _LoginPageState extends State<LoginPage> {
                 // Email Field
                 AppTextField(
                   controller: _emailController,
-                  label: 'School Email',
-                  hint: 'yourname@canteen.spcf.co',
+                  label: 'Email Address',
+                  hint: 'yourname@gmail.com',
                   prefixIcon: Icon(
                     Iconsax.sms,
                     color:

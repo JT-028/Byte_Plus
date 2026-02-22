@@ -48,13 +48,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
-      return 'Please enter your email username';
+      return 'Please enter your email';
     }
-    if (value.contains('@')) {
-      return 'Do not include @. We add it automatically.';
+    if (!value.endsWith('@gmail.com')) {
+      return 'Please use a Gmail address (@gmail.com)';
     }
-    if (value.length < 3) {
-      return 'Username must be at least 3 characters';
+    if (value.length < 11) {
+      // x@gmail.com = 11 chars minimum
+      return 'Please enter a valid Gmail address';
     }
     return null;
   }
@@ -83,15 +84,17 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final name = _nameController.text.trim();
-    final username = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
-    final email = '$username@canteen.spcf.co';
 
     setState(() => _loading = true);
 
     try {
       final userCred = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
+
+      // Send email verification
+      await userCred.user!.sendEmailVerification();
 
       await FirebaseFirestore.instance
           .collection('users')
@@ -100,12 +103,16 @@ class _RegisterPageState extends State<RegisterPage> {
             'name': name,
             'email': email,
             'role': 'student',
+            'emailVerified': false,
             'createdAt': DateTime.now(),
           });
 
+      // Sign out immediately - user must verify email first
+      await FirebaseAuth.instance.signOut();
+
       if (!mounted) return;
 
-      _showSuccess('Account created successfully!');
+      _showVerificationSent(email);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _showError(_getFirebaseErrorMessage(e.code));
@@ -144,6 +151,23 @@ class _RegisterPageState extends State<RegisterPage> {
       title: 'Success!',
       message: message,
       primaryLabel: 'Continue to Login',
+      onPrimaryPressed: () {
+        Navigator.pop(context);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+      },
+    );
+  }
+
+  void _showVerificationSent(String email) {
+    AppModalDialog.success(
+      context: context,
+      title: 'Verify Your Email',
+      message:
+          'A verification link has been sent to $email. Please check your inbox and verify your email before logging in.',
+      primaryLabel: 'Go to Login',
       onPrimaryPressed: () {
         Navigator.pop(context);
         Navigator.pushReplacement(
@@ -234,8 +258,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 // Email Field
                 AppTextField(
                   controller: _emailController,
-                  label: 'School Email Username',
-                  hint: 'yourname (without @canteen.spcf.co)',
+                  label: 'Email Address',
+                  hint: 'yourname@gmail.com',
                   prefixIcon: Icon(
                     Iconsax.sms,
                     color:
@@ -246,27 +270,6 @@ class _RegisterPageState extends State<RegisterPage> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: _validateEmail,
-                  suffixIcon: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs,
-                    ),
-                    margin: const EdgeInsets.only(right: AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: (isDark
-                              ? AppColors.primaryLight
-                              : AppColors.primary)
-                          .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Text(
-                      '@canteen.spcf.co',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color:
-                            isDark ? AppColors.primaryLight : AppColors.primary,
-                      ),
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: AppSpacing.md),

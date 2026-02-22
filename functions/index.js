@@ -181,3 +181,80 @@ exports.syncBadgeCount = functions.https.onCall(async (data, context) => {
 
   return { unreadCount: unreadQuery.docs.length };
 });
+
+/**
+ * Delete user from Firebase Authentication
+ * Only admins can call this function
+ */
+exports.deleteUserAuth = functions.https.onCall(async (data, context) => {
+  // Check if the caller is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be logged in');
+  }
+
+  // Check if the caller is an admin
+  const callerDoc = await db.collection('users').doc(context.auth.uid).get();
+  if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can delete users');
+  }
+
+  const { userId } = data;
+  if (!userId) {
+    throw new functions.https.HttpsError('invalid-argument', 'userId is required');
+  }
+
+  // Prevent self-deletion
+  if (userId === context.auth.uid) {
+    throw new functions.https.HttpsError('invalid-argument', 'Cannot delete your own account');
+  }
+
+  try {
+    // Delete user from Firebase Authentication
+    await admin.auth().deleteUser(userId);
+    console.log(`Successfully deleted user ${userId} from Firebase Auth`);
+
+    // Also delete the user document and subcollections from Firestore
+    const userRef = db.collection('users').doc(userId);
+    
+    // Delete subcollections
+    const subcollections = ['cartItems', 'favorites', 'notifications', 'orders'];
+    for (const subcol of subcollections) {
+      const colRef = userRef.collection(subcol);
+      const docs = await colRef.get();
+      const batch = db.batch();
+      docs.forEach(doc => batch.delete(doc.ref));
+      if (docs.size > 0) {
+        await batch.commit();
+        console.log(`Deleted ${docs.size} docs from ${subcol}`);
+      }
+    }
+
+    // Delete the main user document
+    await userRef.delete();
+    console.log(`Deleted user document for ${userId}`);
+
+    return { success: true, message: 'User deleted successfully' };
+  } catch (error) {
+    console.error(`Error deleting user ${userId}:`, error);
+    
+    // Handle specific errors
+    if (error.code === 'auth/user-not-found') {
+      // User doesn't exist in Auth, but we should still clean up Firestore
+      const userRef = db.collection('users').doc(userId);
+      
+      const subcollections = ['cartItems', 'favorites', 'notifications', 'orders'];
+      for (const subcol of subcollections) {
+        const colRef = userRef.collection(subcol);
+        const docs = await colRef.get();
+        const batch = db.batch();
+        docs.forEach(doc => batch.delete(doc.ref));
+        if (docs.size > 0) await batch.commit();
+      }
+      
+      await userRef.delete();
+      return { success: true, message: 'User data cleaned up (was not in Auth)' };
+    }
+    
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});

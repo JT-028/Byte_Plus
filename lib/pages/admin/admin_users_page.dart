@@ -1,5 +1,6 @@
 // lib/pages/admin/admin_users_page.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -782,68 +783,62 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     }
   }
 
-  /// Delete user account
+  /// Delete user account from both Firestore and Firebase Auth
   Future<void> _deleteUser(String userId, String userName) async {
     final ok = await AppModalDialog.confirm(
       context: context,
       title: 'Delete User?',
       message:
-          'Are you sure you want to delete "$userName"? This will disable their account and remove their app data.\n\nNote: The user will be blocked from logging in. To fully remove their authentication, delete their account from Firebase Console.',
-      confirmLabel: 'Delete',
+          'Are you sure you want to permanently delete "$userName"? This will remove their account from both the database and authentication system. This action cannot be undone.',
+      confirmLabel: 'Delete Permanently',
       cancelLabel: 'Cancel',
       isDanger: true,
     );
 
     if (ok == true) {
       try {
-        final userRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId);
+        // Show loading dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (context) => const Center(child: CircularProgressIndicator()),
+        );
 
-        // Delete subcollections first
-        final batch = FirebaseFirestore.instance.batch();
+        // Call the Cloud Function to delete user from Auth and Firestore
+        final callable = FirebaseFunctions.instance.httpsCallable(
+          'deleteUserAuth',
+        );
+        final result = await callable.call({'userId': userId});
 
-        final cartItems = await userRef.collection('cartItems').get();
-        for (final doc in cartItems.docs) {
-          batch.delete(doc.reference);
-        }
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
 
-        final favorites = await userRef.collection('favorites').get();
-        for (final doc in favorites.docs) {
-          batch.delete(doc.reference);
-        }
+        final data = result.data as Map<String, dynamic>;
 
-        final notifications = await userRef.collection('notifications').get();
-        for (final doc in notifications.docs) {
-          batch.delete(doc.reference);
-        }
+        await AppModalDialog.success(
+          context: context,
+          title: 'User Deleted',
+          message: data['message'] ?? 'The user has been permanently deleted.',
+        );
+      } on FirebaseFunctionsException catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
 
-        await batch.commit();
-
-        // Mark the user document as deleted instead of deleting it
-        // This prevents them from logging in and allows blocking re-registration
-        await userRef.update({
-          'status': 'deleted',
-          'deletedAt': FieldValue.serverTimestamp(),
-          'deletedBy': FirebaseAuth.instance.currentUser?.uid,
-        });
-
-        if (mounted) {
-          await AppModalDialog.success(
-            context: context,
-            title: 'User Deleted',
-            message:
-                'The user account has been disabled and their data removed.',
-          );
-        }
+        await AppModalDialog.warning(
+          context: context,
+          title: 'Error',
+          message: 'Failed to delete user: ${e.message}',
+        );
       } catch (e) {
-        if (mounted) {
-          await AppModalDialog.warning(
-            context: context,
-            title: 'Error',
-            message: 'Failed to delete user: $e',
-          );
-        }
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
+
+        await AppModalDialog.warning(
+          context: context,
+          title: 'Error',
+          message: 'Failed to delete user: $e',
+        );
       }
     }
   }
