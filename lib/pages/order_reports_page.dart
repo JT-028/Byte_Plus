@@ -226,9 +226,9 @@ class _OrderReportsPageState extends State<OrderReportsPage> {
           // Items
           for (final item in items) {
             if (item is Map<String, dynamic>) {
-              final name = item['name'] ?? 'Item';
-              final qty = item['qty'] ?? 1;
-              final price = (item['price'] as num?)?.toDouble() ?? 0;
+              final name = item['productName'] ?? 'Item';
+              final qty = item['quantity'] ?? 1;
+              final price = (item['lineTotal'] as num?)?.toDouble() ?? 0;
               bytes.addAll(
                 EscPosCommands.printLine(
                   '   $name x$qty - P${price.toStringAsFixed(2)}',

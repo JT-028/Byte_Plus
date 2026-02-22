@@ -393,9 +393,11 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     final pickupTime = data["pickupTime"];
     final formattedTime = pickupNow ? null : _formatPickupTime(pickupTime);
 
-    // Generate pickup number from orderId (last 3 chars uppercase with A prefix)
+    // Use queueNo from order data, fallback to generated number
     final pickupNumber =
-        "A${orderId.length > 2 ? orderId.substring(orderId.length - 2).toUpperCase() : orderId.toUpperCase()}";
+        (data["queueNo"] ??
+                "A${orderId.length > 2 ? orderId.substring(orderId.length - 2).toUpperCase() : orderId.toUpperCase()}")
+            .toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

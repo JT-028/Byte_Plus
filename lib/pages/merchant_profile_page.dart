@@ -33,11 +33,16 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     final storeId = userDoc.data()?['storeId']?.toString();
     if (storeId == null || storeId.isEmpty) return;
 
-    final storeDoc = await FirebaseFirestore.instance.collection('stores').doc(storeId).get();
+    final storeDoc =
+        await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(storeId)
+            .get();
     final data = storeDoc.data();
     if (data == null) return;
 
@@ -49,11 +54,17 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
         _storeId = storeId;
         if (openStr != null && openStr.contains(':')) {
           final parts = openStr.split(':');
-          _openingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+          _openingTime = TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
         }
         if (closeStr != null && closeStr.contains(':')) {
           final parts = closeStr.split(':');
-          _closingTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+          _closingTime = TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
         }
       });
     }
@@ -67,13 +78,11 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
   }
 
   Future<void> _pickTime({required bool isOpening}) async {
-    final initial = isOpening
-        ? (_openingTime ?? const TimeOfDay(hour: 8, minute: 0))
-        : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-    );
+    final initial =
+        isOpening
+            ? (_openingTime ?? const TimeOfDay(hour: 8, minute: 0))
+            : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
+    final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null && _storeId != null) {
       setState(() {
         if (isOpening) {
@@ -83,11 +92,13 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
         }
       });
       // Save to Firestore
-      final timeStr = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      final timeStr =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      final fieldName = isOpening ? 'openingTime' : 'closingTime';
       await FirebaseFirestore.instance
           .collection('stores')
           .doc(_storeId)
-          .update({isOpening ? 'openingTime' : 'closingTime': timeStr});
+          .update({fieldName: timeStr});
     }
   }
 
@@ -358,14 +369,16 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.backgroundDark
-                                      : Colors.white,
+                                  color:
+                                      isDark
+                                          ? AppColors.backgroundDark
+                                          : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: isDark
-                                        ? AppColors.borderDark
-                                        : AppColors.border,
+                                    color:
+                                        isDark
+                                            ? AppColors.borderDark
+                                            : AppColors.border,
                                   ),
                                 ),
                                 child: Column(
@@ -374,9 +387,10 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                       'Opens',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondary,
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -387,11 +401,12 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: _openingTime != null
-                                            ? AppColors.primary
-                                            : (isDark
-                                                ? AppColors.textTertiaryDark
-                                                : AppColors.textTertiary),
+                                        color:
+                                            _openingTime != null
+                                                ? AppColors.primary
+                                                : (isDark
+                                                    ? AppColors.textTertiaryDark
+                                                    : AppColors.textTertiary),
                                       ),
                                     ),
                                   ],
@@ -405,9 +420,10 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                               '–',
                               style: TextStyle(
                                 fontSize: 18,
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondary,
+                                color:
+                                    isDark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                               ),
                             ),
                           ),
@@ -421,14 +437,16 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.backgroundDark
-                                      : Colors.white,
+                                  color:
+                                      isDark
+                                          ? AppColors.backgroundDark
+                                          : Colors.white,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
-                                    color: isDark
-                                        ? AppColors.borderDark
-                                        : AppColors.border,
+                                    color:
+                                        isDark
+                                            ? AppColors.borderDark
+                                            : AppColors.border,
                                   ),
                                 ),
                                 child: Column(
@@ -437,9 +455,10 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                       'Closes',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: isDark
-                                            ? AppColors.textSecondaryDark
-                                            : AppColors.textSecondary,
+                                        color:
+                                            isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -450,11 +469,12 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
-                                        color: _closingTime != null
-                                            ? AppColors.primary
-                                            : (isDark
-                                                ? AppColors.textTertiaryDark
-                                                : AppColors.textTertiary),
+                                        color:
+                                            _closingTime != null
+                                                ? AppColors.primary
+                                                : (isDark
+                                                    ? AppColors.textTertiaryDark
+                                                    : AppColors.textTertiary),
                                       ),
                                     ),
                                   ],

@@ -69,6 +69,38 @@ class _UserShellState extends State<UserShell>
     return '$h:$m $p';
   }
 
+  bool _isStoreOpen(String? openingTime, String? closingTime) {
+    if (openingTime == null || closingTime == null)
+      return true; // Open if no hours set
+    if (!openingTime.contains(':') || !closingTime.contains(':')) return true;
+
+    try {
+      final now = TimeOfDay.now();
+      final nowMinutes = now.hour * 60 + now.minute;
+
+      final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      final openMinutes = openHour * 60 + openMinute;
+
+      final closeParts = closingTime.split(':');
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      final closeMinutes = closeHour * 60 + closeMinute;
+
+      // Handle case where closing time is past midnight
+      if (closeMinutes < openMinutes) {
+        // Store is open from opening time to midnight, or from midnight to closing time
+        return nowMinutes >= openMinutes || nowMinutes < closeMinutes;
+      } else {
+        // Normal case: store opens and closes on the same day
+        return nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+      }
+    } catch (e) {
+      return true; // Default to open if parsing fails
+    }
+  }
+
   void _onSearchChanged(String query) {
     setState(() => _searchQuery = query.trim());
     _debounceTimer?.cancel();
@@ -729,6 +761,9 @@ class _UserShellState extends State<UserShell>
     String? closingTime,
     bool isGridItem = false,
   }) {
+    // Check if store is currently open
+    final isOpen = _isStoreOpen(openingTime, closingTime);
+
     // Build operating hours string
     String? hoursText;
     if (openingTime != null && closingTime != null) {
@@ -737,218 +772,295 @@ class _UserShellState extends State<UserShell>
     }
 
     return Semantics(
-      label: '$name, $type, prep time $prepTime',
-      hint: 'Double tap to view menu',
-      button: true,
+      label: '$name, $type, prep time $prepTime${isOpen ? '' : ', closed'}',
+      hint: isOpen ? 'Double tap to view menu' : 'Store is currently closed',
+      button: isOpen,
       child: GestureDetector(
-        onTap: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (_) => StorePage(
-                    storeId: storeId,
-                    name: name,
-                    description: description,
-                    type: type,
-                    prepTime: prepTime,
-                    logoUrl: logoUrl,
-                    bannerUrl: bannerUrl,
-                    openingTime: openingTime,
-                    closingTime: closingTime,
-                  ),
-            ),
-          );
-          // Handle go to cart signal from store page
-          if (result == 'goToCart' && mounted) {
-            setState(() => selectedNav = 1);
-          }
-        },
-        child: Container(
-          margin:
-              isGridItem ? EdgeInsets.zero : const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.network(
-                    logoUrl,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) => Container(
-                          width: 64,
-                          height: 64,
-                          color:
-                              isDark
-                                  ? AppColors.surfaceVariantDark
-                                  : Colors.grey.shade200,
-                          child: Icon(
-                            Iconsax.shop,
-                            color:
-                                isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiary,
+        onTap:
+            !isOpen
+                ? null
+                : () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => StorePage(
+                            storeId: storeId,
+                            name: name,
+                            description: description,
+                            type: type,
+                            prepTime: prepTime,
+                            logoUrl: logoUrl,
+                            bannerUrl: bannerUrl,
+                            openingTime: openingTime,
+                            closingTime: closingTime,
                           ),
-                        ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    ),
+                  );
+                  // Handle go to cart signal from store page
+                  if (result == 'goToCart' && mounted) {
+                    setState(() => selectedNav = 1);
+                  }
+                },
+        child: Opacity(
+          opacity: isOpen ? 1.0 : 0.5,
+          child: Container(
+            margin:
+                isGridItem
+                    ? EdgeInsets.zero
+                    : const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color:
+                  isOpen
+                      ? (isDark ? AppColors.surfaceDark : Colors.white)
+                      : (isDark
+                          ? AppColors.surfaceVariantDark
+                          : Colors.grey.shade100),
+              borderRadius: BorderRadius.circular(16),
+              border:
+                  !isOpen
+                      ? Border.all(
                         color:
                             isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
+                                ? AppColors.borderDark
+                                : Colors.grey.shade300,
+                        width: 1,
+                      )
+                      : null,
+              boxShadow:
+                  isOpen
+                      ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                      : null,
+            ),
+            child: Stack(
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow:
+                            isOpen
+                                ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                                : null,
                       ),
-                    ),
-                    if (description.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color:
-                              isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondary,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: ColorFiltered(
+                          colorFilter:
+                              isOpen
+                                  ? const ColorFilter.mode(
+                                    Colors.transparent,
+                                    BlendMode.multiply,
+                                  )
+                                  : ColorFilter.mode(
+                                    Colors.grey.shade600,
+                                    BlendMode.saturation,
+                                  ),
+                          child: Image.network(
+                            logoUrl,
+                            width: 64,
+                            height: 64,
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (_, __, ___) => Container(
+                                  width: 64,
+                                  height: 64,
+                                  color:
+                                      isDark
+                                          ? AppColors.surfaceVariantDark
+                                          : Colors.grey.shade200,
+                                  child: Icon(
+                                    Iconsax.shop,
+                                    color:
+                                        isDark
+                                            ? AppColors.textTertiaryDark
+                                            : AppColors.textTertiary,
+                                  ),
+                                ),
+                          ),
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        if (hoursText != null) ...[
-                          Icon(
-                            Iconsax.clock,
-                            size: 14,
-                            color:
-                                isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiary,
+                    ),
+                    const SizedBox(width: 14),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                            ),
                           ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              hoursText,
+                          if (description.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: 12,
                                 color:
                                     isDark
-                                        ? AppColors.textTertiaryDark
-                                        : AppColors.textTertiary,
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ] else if (prepTime.isNotEmpty) ...[
-                          Icon(
-                            Iconsax.clock,
-                            size: 14,
-                            color:
-                                isDark
-                                    ? AppColors.textTertiaryDark
-                                    : AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            prepTime,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color:
-                                  isDark
-                                      ? AppColors.textTertiaryDark
-                                      : AppColors.textTertiary,
-                            ),
+                          ],
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              if (!isOpen) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Iconsax.clock,
+                                        size: 12,
+                                        color: AppColors.error,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'CLOSED',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.error,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              if (hoursText != null) ...[
+                                Icon(
+                                  Iconsax.clock,
+                                  size: 14,
+                                  color:
+                                      isDark
+                                          ? AppColors.textTertiaryDark
+                                          : AppColors.textTertiary,
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    hoursText,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          isDark
+                                              ? AppColors.textTertiaryDark
+                                              : AppColors.textTertiary,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ] else if (prepTime.isNotEmpty && isOpen) ...[
+                                Icon(
+                                  Iconsax.clock,
+                                  size: 14,
+                                  color:
+                                      isDark
+                                          ? AppColors.textTertiaryDark
+                                          : AppColors.textTertiary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  prepTime,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color:
+                                        isDark
+                                            ? AppColors.textTertiaryDark
+                                            : AppColors.textTertiary,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ],
-                      ],
+                      ),
+                    ),
+
+                    StreamBuilder<DocumentSnapshot>(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection("users")
+                              .doc(uid)
+                              .collection("favorites")
+                              .doc(storeId)
+                              .snapshots(),
+                      builder: (_, favSnap) {
+                        bool isFav = favSnap.data?.exists ?? false;
+                        return GestureDetector(
+                          onTap:
+                              () => toggleFavorite(
+                                storeId,
+                                name,
+                                type,
+                                logoUrl,
+                                bannerUrl,
+                              ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color:
+                                  isFav
+                                      ? AppColors.error.withOpacity(0.1)
+                                      : (isDark
+                                          ? AppColors.surfaceVariantDark
+                                          : Colors.grey.shade100),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isFav ? Iconsax.heart : Iconsax.heart,
+                              color:
+                                  isFav
+                                      ? AppColors.error
+                                      : (isDark
+                                          ? AppColors.textTertiaryDark
+                                          : Colors.grey),
+                              size: 22,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
-              ),
-
-              StreamBuilder<DocumentSnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection("users")
-                        .doc(uid)
-                        .collection("favorites")
-                        .doc(storeId)
-                        .snapshots(),
-                builder: (_, favSnap) {
-                  bool isFav = favSnap.data?.exists ?? false;
-                  return GestureDetector(
-                    onTap:
-                        () => toggleFavorite(
-                          storeId,
-                          name,
-                          type,
-                          logoUrl,
-                          bannerUrl,
-                        ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color:
-                            isFav
-                                ? AppColors.error.withOpacity(0.1)
-                                : (isDark
-                                    ? AppColors.surfaceVariantDark
-                                    : Colors.grey.shade100),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isFav ? Iconsax.heart : Iconsax.heart,
-                        color:
-                            isFav
-                                ? AppColors.error
-                                : (isDark
-                                    ? AppColors.textTertiaryDark
-                                    : Colors.grey),
-                        size: 22,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1084,6 +1196,9 @@ class _CartPageState extends State<CartPage> {
   final Map<String, bool> _pickupNowMap = {};
   final Map<String, DateTime?> _pickupTimeMap = {};
 
+  // Store selection for checkout (which stores to place order for)
+  final Map<String, bool> _selectedStores = {};
+
   // Cache for store info (fetched from Firestore when missing from cart items)
   final Map<String, Map<String, String>> _storeInfoCache = {};
 
@@ -1101,6 +1216,15 @@ class _CartPageState extends State<CartPage> {
     setState(() {
       _pickupTimeMap[storeId] = time;
       if (time != null) _pickupNowMap[storeId] = false;
+    });
+  }
+
+  // Store selection methods (default to selected)
+  bool _isStoreSelected(String storeId) => _selectedStores[storeId] ?? true;
+
+  void _toggleStoreSelection(String storeId) {
+    setState(() {
+      _selectedStores[storeId] = !(_selectedStores[storeId] ?? true);
     });
   }
 
@@ -1150,10 +1274,26 @@ class _CartPageState extends State<CartPage> {
 
             final docs = snap.data!.docs;
 
-            final total = docs.fold<double>(
-              0,
-              (prev, d) => prev + (d['lineTotal'] as num).toDouble(),
-            );
+            // Group by store to calculate selected total
+            final Map<String, List<QueryDocumentSnapshot>> storeGroups = {};
+            for (var doc in docs) {
+              final data = doc.data() as Map<String, dynamic>;
+              final storeId = (data['storeId'] ?? '').toString();
+              if (!storeGroups.containsKey(storeId)) {
+                storeGroups[storeId] = [];
+              }
+              storeGroups[storeId]!.add(doc);
+            }
+
+            // Calculate total only for selected stores
+            double selectedTotal = 0;
+            for (var entry in storeGroups.entries) {
+              if (_isStoreSelected(entry.key)) {
+                for (var doc in entry.value) {
+                  selectedTotal += (doc['lineTotal'] as num).toDouble();
+                }
+              }
+            }
 
             // get storeName from first item
             final first = docs.first.data() as Map<String, dynamic>;
@@ -1184,7 +1324,7 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 _bottomTotalBar(
-                  total: total,
+                  total: selectedTotal,
                   firstItem: first,
                   docs: docs,
                   isDark: isDark,
@@ -1540,6 +1680,7 @@ class _CartPageState extends State<CartPage> {
                       final storeName = snapshot.data?['name'] ?? storeId;
                       final storeLogo = snapshot.data?['logo'] ?? '';
                       return _buildStoreHeader(
+                        storeId,
                         storeName,
                         storeLogo,
                         storeTotal,
@@ -1548,6 +1689,7 @@ class _CartPageState extends State<CartPage> {
                     },
                   )
                   : _buildStoreHeader(
+                    storeId,
                     cartStoreName,
                     cartStoreLogo,
                     storeTotal,
@@ -1580,66 +1722,123 @@ class _CartPageState extends State<CartPage> {
   }
 
   Widget _buildStoreHeader(
+    String storeId,
     String storeName,
     String storeLogo,
     double storeTotal,
     bool isDark,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color:
-            isDark
-                ? AppColors.primaryLight.withOpacity(0.15)
-                : AppColors.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          if (storeLogo.isNotEmpty)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.network(
-                storeLogo,
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
-                errorBuilder:
-                    (_, __, ___) => Icon(
-                      Icons.store,
-                      size: 20,
-                      color:
-                          isDark ? AppColors.primaryLight : AppColors.primary,
-                    ),
+    final isSelected = _isStoreSelected(storeId);
+
+    return GestureDetector(
+      onTap: () => _toggleStoreSelection(storeId),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color:
+              isSelected
+                  ? (isDark
+                      ? AppColors.primaryLight.withOpacity(0.15)
+                      : AppColors.primary.withOpacity(0.1))
+                  : (isDark
+                      ? AppColors.surfaceVariantDark
+                      : Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color:
+                isSelected
+                    ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                    : Colors.transparent,
+            width: isSelected ? 2 : 0,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Checkbox
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                color:
+                    isSelected
+                        ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color:
+                      isSelected
+                          ? (isDark
+                              ? AppColors.primaryLight
+                              : AppColors.primary)
+                          : (isDark
+                              ? AppColors.borderDark
+                              : Colors.grey.shade400),
+                  width: 2,
+                ),
               ),
-            )
-          else
-            Icon(
-              Icons.store,
-              size: 20,
-              color: isDark ? AppColors.primaryLight : AppColors.primary,
+              child:
+                  isSelected
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
             ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              storeName,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+            const SizedBox(width: 10),
+            if (storeLogo.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.network(
+                  storeLogo,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.cover,
+                  errorBuilder:
+                      (_, __, ___) => Icon(
+                        Icons.store,
+                        size: 20,
+                        color:
+                            isDark ? AppColors.primaryLight : AppColors.primary,
+                      ),
+                ),
+              )
+            else
+              Icon(
+                Icons.store,
+                size: 20,
                 color: isDark ? AppColors.primaryLight : AppColors.primary,
               ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                storeName,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color:
+                      isSelected
+                          ? (isDark
+                              ? AppColors.primaryLight
+                              : AppColors.primary)
+                          : (isDark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary),
+                ),
+              ),
             ),
-          ),
-          Text(
-            "₱ ${storeTotal.toStringAsFixed(0)}",
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.primaryLight : AppColors.primary,
+            Text(
+              "₱ ${storeTotal.toStringAsFixed(0)}",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color:
+                    isSelected
+                        ? (isDark ? AppColors.primaryLight : AppColors.primary)
+                        : (isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1875,7 +2074,7 @@ class _CartPageState extends State<CartPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Total",
+                  total > 0 ? "Total" : "Select stores",
                   style: TextStyle(
                     fontSize: 13,
                     color:
@@ -1886,14 +2085,20 @@ class _CartPageState extends State<CartPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "\u20b1 ${total.toStringAsFixed(0)}",
+                  total > 0
+                      ? "\u20b1 ${total.toStringAsFixed(0)}"
+                      : "Tap to select",
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: total > 0 ? 20 : 16,
                     fontWeight: FontWeight.w700,
                     color:
-                        isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
+                        total > 0
+                            ? (isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary)
+                            : (isDark
+                                ? AppColors.textTertiaryDark
+                                : AppColors.textTertiary),
                   ),
                 ),
               ],
@@ -1907,98 +2112,118 @@ class _CartPageState extends State<CartPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isDark ? AppColors.primaryLight : AppColors.primary,
+                  disabledBackgroundColor:
+                      isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                 ),
-                onPressed: () async {
-                  try {
-                    if (docs.isEmpty) {
-                      throw Exception("Cart is empty");
-                    }
+                onPressed:
+                    total <= 0
+                        ? null
+                        : () async {
+                          try {
+                            if (docs.isEmpty) {
+                              throw Exception("Cart is empty");
+                            }
 
-                    // Group items by store
-                    final Map<String, List<Map<String, dynamic>>>
-                    storeItemsMap = {};
-                    for (var doc in docs) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final storeId = (data['storeId'] ?? '').toString();
-                      if (storeId.isEmpty) continue;
+                            // Group items by store (only selected stores)
+                            final Map<String, List<Map<String, dynamic>>>
+                            storeItemsMap = {};
+                            final List<String> cartItemIdsToDelete = [];
 
-                      if (!storeItemsMap.containsKey(storeId)) {
-                        storeItemsMap[storeId] = [];
-                      }
-                      storeItemsMap[storeId]!.add(data);
-                    }
+                            for (var doc in docs) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final storeId =
+                                  (data['storeId'] ?? '').toString();
+                              if (storeId.isEmpty) continue;
 
-                    // Place order for each store
-                    for (final entry in storeItemsMap.entries) {
-                      final storeId = entry.key;
-                      final items = entry.value;
+                              // Only include selected stores
+                              if (!_isStoreSelected(storeId)) continue;
 
-                      // Calculate store total
-                      final storeTotal = items.fold<double>(
-                        0,
-                        (sum, item) =>
-                            sum +
-                            ((item['lineTotal'] as num?)?.toDouble() ?? 0),
-                      );
+                              if (!storeItemsMap.containsKey(storeId)) {
+                                storeItemsMap[storeId] = [];
+                              }
+                              storeItemsMap[storeId]!.add(data);
+                              cartItemIdsToDelete.add(doc.id);
+                            }
 
-                      // Get store name from items or fetch from Firestore
-                      String storeName =
-                          (items.first['storeName'] ?? '').toString();
-                      if (storeName.isEmpty) {
-                        final storeDoc =
-                            await FirebaseFirestore.instance
-                                .collection("stores")
-                                .doc(storeId)
-                                .get();
-                        storeName =
-                            (storeDoc.data()?["name"] ?? "Unknown Store")
-                                .toString();
-                      }
+                            if (storeItemsMap.isEmpty) {
+                              throw Exception("No stores selected");
+                            }
 
-                      // Get pickup settings for this store
-                      final pickupNow = _getPickupNow(storeId);
-                      final pickupTime = _getPickupTime(storeId);
+                            // Place order for each selected store
+                            for (final entry in storeItemsMap.entries) {
+                              final storeId = entry.key;
+                              final items = entry.value;
 
-                      // Place order for this store
-                      await OrderService().placeOrder(
-                        storeId: storeId,
-                        storeName: storeName,
-                        items: items,
-                        total: storeTotal,
-                        pickupNow: pickupNow,
-                        pickupTime: pickupTime,
-                      );
-                    }
+                              // Calculate store total
+                              final storeTotal = items.fold<double>(
+                                0,
+                                (sum, item) =>
+                                    sum +
+                                    ((item['lineTotal'] as num?)?.toDouble() ??
+                                        0),
+                              );
 
-                    // Clear cart after success
-                    await CartService.clearCart();
+                              // Get store name from items or fetch from Firestore
+                              String storeName =
+                                  (items.first['storeName'] ?? '').toString();
+                              if (storeName.isEmpty) {
+                                final storeDoc =
+                                    await FirebaseFirestore.instance
+                                        .collection("stores")
+                                        .doc(storeId)
+                                        .get();
+                                storeName =
+                                    (storeDoc.data()?["name"] ??
+                                            "Unknown Store")
+                                        .toString();
+                              }
 
-                    if (!mounted) return;
-                    await AppModalDialog.success(
-                      context: context,
-                      title: 'Order Successful!',
-                      message:
-                          storeItemsMap.length > 1
-                              ? '${storeItemsMap.length} orders have been placed successfully.'
-                              : 'Your order has been placed successfully.',
-                      primaryLabel: 'OK',
-                      onPrimaryPressed: () {
-                        Navigator.pop(context);
-                      },
-                    );
-                  } catch (e) {
-                    if (!mounted) return;
-                    await AppModalDialog.error(
-                      context: context,
-                      title: 'Order Failed',
-                      message: 'Failed to place order: $e',
-                    );
-                  }
-                },
+                              // Get pickup settings for this store
+                              final pickupNow = _getPickupNow(storeId);
+                              final pickupTime = _getPickupTime(storeId);
+
+                              // Place order for this store
+                              await OrderService().placeOrder(
+                                storeId: storeId,
+                                storeName: storeName,
+                                items: items,
+                                total: storeTotal,
+                                pickupNow: pickupNow,
+                                pickupTime: pickupTime,
+                              );
+                            }
+
+                            // Delete only the ordered cart items
+                            for (final itemId in cartItemIdsToDelete) {
+                              await CartService.deleteItem(itemId);
+                            }
+
+                            if (!mounted) return;
+                            await AppModalDialog.success(
+                              context: context,
+                              title: 'Order Successful!',
+                              message:
+                                  storeItemsMap.length > 1
+                                      ? '${storeItemsMap.length} orders have been placed successfully.'
+                                      : 'Your order has been placed successfully.',
+                              primaryLabel: 'OK',
+                              onPrimaryPressed: () {
+                                Navigator.pop(context);
+                              },
+                            );
+                          } catch (e) {
+                            if (!mounted) return;
+                            await AppModalDialog.error(
+                              context: context,
+                              title: 'Order Failed',
+                              message: 'Failed to place order: $e',
+                            );
+                          }
+                        },
 
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
