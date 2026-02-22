@@ -38,11 +38,17 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
     final storeId = userDoc.data()?['storeId']?.toString();
     if (storeId == null || storeId.isEmpty) return;
 
-    final storeDoc =
-        await FirebaseFirestore.instance
-            .collection('stores')
-            .doc(storeId)
-            .get();
+    final storeDoc = await FirebaseFirestore.instance
+        .collection('stores')
+        .doc(storeId)
+        .get(const GetOptions(source: Source.server))
+        .catchError(
+          (_) =>
+              FirebaseFirestore.instance
+                  .collection('stores')
+                  .doc(storeId)
+                  .get(),
+        );
     final data = storeDoc.data();
     if (data == null) return;
 
@@ -84,6 +90,8 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
             : (_closingTime ?? const TimeOfDay(hour: 17, minute: 0));
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null && _storeId != null) {
+      final oldOpening = _openingTime;
+      final oldClosing = _closingTime;
       setState(() {
         if (isOpening) {
           _openingTime = picked;
@@ -92,13 +100,29 @@ class _MerchantProfilePageState extends State<MerchantProfilePage> {
         }
       });
       // Save to Firestore
-      final timeStr =
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      final fieldName = isOpening ? 'openingTime' : 'closingTime';
-      await FirebaseFirestore.instance
-          .collection('stores')
-          .doc(_storeId)
-          .update({fieldName: timeStr});
+      try {
+        final timeStr =
+            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+        final fieldName = isOpening ? 'openingTime' : 'closingTime';
+        await FirebaseFirestore.instance
+            .collection('stores')
+            .doc(_storeId)
+            .update({fieldName: timeStr});
+      } catch (e) {
+        // Revert on failure
+        if (mounted) {
+          setState(() {
+            _openingTime = oldOpening;
+            _closingTime = oldClosing;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to update operating hours: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 

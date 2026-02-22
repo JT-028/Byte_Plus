@@ -49,6 +49,7 @@ class _EditStorePageState extends State<EditStorePage> {
   // Operating Hours
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
+  bool _hoursModified = false;
 
   bool get isEditing => widget.storeId != null;
 
@@ -58,6 +59,42 @@ class _EditStorePageState extends State<EditStorePage> {
     if (widget.existingData != null) {
       _loadExistingData();
     }
+    // If editing, re-fetch latest operating hours from Firestore
+    if (widget.storeId != null) {
+      _refreshOperatingHours();
+    }
+  }
+
+  Future<void> _refreshOperatingHours() async {
+    try {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('stores')
+              .doc(widget.storeId)
+              .get();
+      final data = doc.data();
+      if (data == null || !mounted) return;
+
+      final openStr = data['openingTime']?.toString();
+      final closeStr = data['closingTime']?.toString();
+
+      setState(() {
+        if (openStr != null && openStr.contains(':')) {
+          final parts = openStr.split(':');
+          _openingTime = TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
+        }
+        if (closeStr != null && closeStr.contains(':')) {
+          final parts = closeStr.split(':');
+          _closingTime = TimeOfDay(
+            hour: int.parse(parts[0]),
+            minute: int.parse(parts[1]),
+          );
+        }
+      });
+    } catch (_) {}
   }
 
   void _loadExistingData() {
@@ -266,6 +303,7 @@ class _EditStorePageState extends State<EditStorePage> {
     final picked = await showTimePicker(context: context, initialTime: initial);
     if (picked != null) {
       setState(() {
+        _hoursModified = true;
         if (isOpening) {
           _openingTime = picked;
         } else {
@@ -858,15 +896,20 @@ class _EditStorePageState extends State<EditStorePage> {
         'isActive': _isActive,
         'updatedAt': FieldValue.serverTimestamp(),
         'category': _selectedCategories,
-        'openingTime':
+      };
+
+      // Only include operating hours if admin explicitly changed them
+      // or if creating a new store
+      if (_hoursModified || !isEditing) {
+        data['openingTime'] =
             _openingTime != null
                 ? '${_openingTime!.hour.toString().padLeft(2, '0')}:${_openingTime!.minute.toString().padLeft(2, '0')}'
-                : null,
-        'closingTime':
+                : null;
+        data['closingTime'] =
             _closingTime != null
                 ? '${_closingTime!.hour.toString().padLeft(2, '0')}:${_closingTime!.minute.toString().padLeft(2, '0')}'
-                : null,
-      };
+                : null;
+      }
 
       if (isEditing) {
         await FirebaseFirestore.instance
