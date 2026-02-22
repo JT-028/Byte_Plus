@@ -1291,6 +1291,35 @@ class _CartPageState extends State<CartPage> {
     });
   }
 
+  // Check if store is currently open based on opening/closing times
+  bool _isStoreOpen(String? openingTime, String? closingTime) {
+    if (openingTime == null || closingTime == null) return true;
+    if (!openingTime.contains(':') || !closingTime.contains(':')) return true;
+
+    try {
+      final now = TimeOfDay.now();
+      final nowMinutes = now.hour * 60 + now.minute;
+
+      final openParts = openingTime.split(':');
+      final openHour = int.parse(openParts[0]);
+      final openMinute = int.parse(openParts[1]);
+      final openMinutes = openHour * 60 + openMinute;
+
+      final closeParts = closingTime.split(':');
+      final closeHour = int.parse(closeParts[0]);
+      final closeMinute = int.parse(closeParts[1]);
+      final closeMinutes = closeHour * 60 + closeMinute;
+
+      if (closeMinutes < openMinutes) {
+        return nowMinutes >= openMinutes || nowMinutes < closeMinutes;
+      } else {
+        return nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+      }
+    } catch (e) {
+      return true;
+    }
+  }
+
   // Fetch store info and cache it
   Future<Map<String, String>> _fetchStoreInfo(String storeId) async {
     if (_storeInfoCache.containsKey(storeId)) {

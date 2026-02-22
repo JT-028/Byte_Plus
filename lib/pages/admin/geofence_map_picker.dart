@@ -62,9 +62,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
+        desiredAccuracy: LocationAccuracy.high,
       );
 
       setState(() {
