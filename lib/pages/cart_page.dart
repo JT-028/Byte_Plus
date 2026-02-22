@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../theme/app_theme.dart';
 import '../services/order_service.dart';
@@ -531,6 +532,74 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
+  /// Check if user is within the store's geofence (if configured)
+  /// Returns true if allowed to order, false if blocked
+  Future<bool> _checkStoreGeofence(
+    Map<String, dynamic> storeData,
+    String storeName,
+  ) async {
+    // Get store geofence settings
+    final double? storeLat = (storeData['latitude'] as num?)?.toDouble();
+    final double? storeLng = (storeData['longitude'] as num?)?.toDouble();
+    final double storeRadius =
+        (storeData['geofenceRadius'] as num?)?.toDouble() ?? 0;
+
+    // If no geofence configured for this store, allow ordering
+    if (storeLat == null || storeLng == null || storeRadius <= 0) {
+      debugPrint('[StoreGeofence] No geofence configured for $storeName');
+      return true;
+    }
+
+    try {
+      // Get user's current location
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Calculate distance from store
+      final distance = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        storeLat,
+        storeLng,
+      );
+
+      debugPrint(
+        '[StoreGeofence] User at (${position.latitude}, ${position.longitude})',
+      );
+      debugPrint(
+        '[StoreGeofence] Store at ($storeLat, $storeLng), radius: ${storeRadius}m',
+      );
+      debugPrint('[StoreGeofence] Distance: ${distance.toStringAsFixed(2)}m');
+
+      if (distance > storeRadius) {
+        // User is outside store's geofence
+        if (!mounted) return false;
+        await AppModalDialog.error(
+          context: context,
+          title: 'Out of Range',
+          message:
+              'You are ${distance.toInt()}m away from $storeName. '
+              'Please move within ${storeRadius.toInt()}m of the store to place an order.',
+        );
+        return false;
+      }
+
+      return true; // User is within geofence
+    } catch (e) {
+      debugPrint('[StoreGeofence] Error checking location: $e');
+      // If we can't get location, show error but don't block
+      if (!mounted) return false;
+      await AppModalDialog.error(
+        context: context,
+        title: 'Location Error',
+        message:
+            'Unable to verify your location. Please ensure location services are enabled.',
+      );
+      return false;
+    }
+  }
+
   Future<void> _placeOrder({
     required String uid,
     required List<QueryDocumentSnapshot> cartDocs,
@@ -590,6 +659,17 @@ class _CartPageState extends State<CartPage> {
               '$storeName is currently closed. Please try again during operating hours.',
         );
         return;
+      }
+
+      // Check if user is within store's geofence (if configured)
+      final storeGeofenceCheck = await _checkStoreGeofence(
+        storeData,
+        storeName,
+      );
+      if (!storeGeofenceCheck) {
+        if (!mounted) return;
+        setState(() => _placing = false);
+        return; // Dialog already shown in _checkStoreGeofence
       }
 
       final orderId = await OrderService().placeOrder(
