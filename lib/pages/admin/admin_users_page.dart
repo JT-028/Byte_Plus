@@ -19,7 +19,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   String searchQuery = '';
   String selectedRoleFilter = 'All';
   final searchController = TextEditingController();
-  bool _isCreatingUser = false; // Flag to pause stream during user creation
 
   final roles = ['All', 'student', 'staff', 'admin'];
 
@@ -165,12 +164,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               .orderBy('name')
               .snapshots(),
       builder: (context, snap) {
-        // During user creation, show loading to avoid permission errors
-        if (_isCreatingUser) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        // Handle stream errors (e.g., permission denied during auth switch)
+        // Handle stream errors
         if (snap.hasError) {
           return Center(
             child: Column(
@@ -498,51 +492,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
   }
 
-  /// Show a full-screen loading overlay to prevent UI interactions
-  void _showLoadingOverlay(bool isDark, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      barrierColor: Colors.black54,
-      builder:
-          (context) => PopScope(
-            canPop: false,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      message,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color:
-                            isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-    );
-  }
-
   Future<void> _changeRole(String userId, String newRole) async {
     final ok = await AppModalDialog.confirm(
       context: context,
@@ -582,17 +531,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     );
 
     if (result != null && mounted) {
-      // Prompt admin for their password first, before any account creation
-      final adminPassword = await _promptForAdminPassword(isDark);
-      if (adminPassword == null) {
-        return; // User cancelled
-      }
-
-      // Set flag to pause StreamBuilder during auth switch
-      setState(() => _isCreatingUser = true);
-
-      // Show full-screen loading overlay to block all StreamBuilders during auth switch
-      _showLoadingOverlay(isDark, 'Creating user account...');
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
       try {
         final email = result['email'] as String;
@@ -600,177 +544,47 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         final name = result['name'] as String;
         final role = result['role'] as String;
 
-        // Save admin credentials to re-authenticate after user creation
-        final adminUser = FirebaseAuth.instance.currentUser;
-        final adminEmail = adminUser?.email;
-        final adminUid = adminUser?.uid;
-
-        if (adminEmail == null) {
-          throw Exception('Admin email not found');
-        }
-
-        // Create auth account (this will sign in as the new user)
-        final credential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(email: email, password: password);
-
-        // Create Firestore document for the new user
-        // Admin-created accounts are automatically verified
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(credential.user!.uid)
-            .set({
-              'name': name,
-              'email': email,
-              'role': role,
-              'emailVerified': true, // Admin-created accounts are pre-verified
-              'status': 'active',
-              'createdAt': FieldValue.serverTimestamp(),
-              'createdBy': adminUid,
-            });
-
-        // Sign out the newly created user immediately
-        await FirebaseAuth.instance.signOut();
-
-        // Re-authenticate as admin as fast as possible
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: adminEmail,
-          password: adminPassword,
+        // Call Cloud Function to create user (avoids auth state switching)
+        final callable = FirebaseFunctions.instance.httpsCallable(
+          'createUserAuth',
         );
+        final response = await callable.call({
+          'email': email,
+          'password': password,
+          'name': name,
+          'role': role,
+        });
 
-        // Dismiss loading overlay and reset flag
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-          setState(() => _isCreatingUser = false);
-        }
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
 
-        if (mounted) {
-          await AppModalDialog.success(
-            context: context,
-            title: 'User Created',
-            message: 'The new user account has been created successfully.',
-          );
-        }
-      } on FirebaseAuthException catch (e) {
-        // Dismiss loading overlay and reset flag
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-          setState(() => _isCreatingUser = false);
-        }
+        final data = response.data as Map<String, dynamic>;
 
-        // Try to re-sign in admin if something went wrong
-        await _tryReauthenticateAdmin();
+        await AppModalDialog.success(
+          context: context,
+          title: 'User Created',
+          message:
+              data['message'] ??
+              'The new user account has been created successfully.',
+        );
+      } on FirebaseFunctionsException catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
 
-        if (mounted) {
-          await AppModalDialog.warning(
-            context: context,
-            title: 'Error',
-            message: e.message ?? 'Failed to create user account.',
-          );
-        }
+        await AppModalDialog.warning(
+          context: context,
+          title: 'Error',
+          message: e.message ?? 'Failed to create user account.',
+        );
       } catch (e) {
-        // Dismiss loading overlay and reset flag
-        if (mounted) {
-          Navigator.of(context, rootNavigator: true).pop();
-          setState(() => _isCreatingUser = false);
-        }
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
 
-        // Try to re-sign in admin if something went wrong
-        await _tryReauthenticateAdmin();
-
-        if (mounted) {
-          await AppModalDialog.warning(
-            context: context,
-            title: 'Error',
-            message: 'Failed to create user: $e',
-          );
-        }
-      }
-    }
-  }
-
-  /// Prompt admin for their password
-  Future<String?> _promptForAdminPassword(bool isDark) async {
-    final controller = TextEditingController();
-    final result = await showDialog<String?>(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => AlertDialog(
-            backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              'Confirm Your Password',
-              style: TextStyle(
-                color:
-                    isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Enter your admin password to continue creating this user.',
-                  style: TextStyle(
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  obscureText: true,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: 'Your Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, null),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color:
-                        isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, controller.text),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-    );
-    controller.dispose();
-    return result;
-  }
-
-  /// Try to re-authenticate admin if session was lost
-  Future<void> _tryReauthenticateAdmin() async {
-    // If we're not signed in, redirect to login
-    if (FirebaseAuth.instance.currentUser == null) {
-      // The splash page will handle redirecting to login
-      if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
+        await AppModalDialog.warning(
+          context: context,
+          title: 'Error',
+          message: 'Failed to create user: $e',
+        );
       }
     }
   }

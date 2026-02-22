@@ -258,3 +258,78 @@ exports.deleteUserAuth = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+/**
+ * Create user in Firebase Authentication and Firestore
+ * Only admins can call this function
+ * This avoids the auth state switching problem on the client
+ */
+exports.createUserAuth = functions.https.onCall(async (data, context) => {
+  // Check if the caller is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be logged in');
+  }
+
+  // Check if the caller is an admin
+  const callerDoc = await db.collection('users').doc(context.auth.uid).get();
+  if (!callerDoc.exists || callerDoc.data().role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can create users');
+  }
+
+  const { email, password, name, role } = data;
+  
+  // Validate input
+  if (!email || !password || !name || !role) {
+    throw new functions.https.HttpsError('invalid-argument', 'email, password, name, and role are required');
+  }
+
+  const validRoles = ['student', 'staff', 'admin'];
+  if (!validRoles.includes(role)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid role. Must be student, staff, or admin');
+  }
+
+  try {
+    // Create user in Firebase Authentication
+    const userRecord = await admin.auth().createUser({
+      email: email,
+      password: password,
+      displayName: name,
+    });
+
+    console.log(`Successfully created user ${userRecord.uid} in Firebase Auth`);
+
+    // Create Firestore document for the user
+    await db.collection('users').doc(userRecord.uid).set({
+      name: name,
+      email: email,
+      role: role,
+      emailVerified: true, // Admin-created accounts are pre-verified
+      status: 'active',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: context.auth.uid,
+    });
+
+    console.log(`Created Firestore document for user ${userRecord.uid}`);
+
+    return { 
+      success: true, 
+      message: 'User created successfully',
+      userId: userRecord.uid 
+    };
+  } catch (error) {
+    console.error('Error creating user:', error);
+    
+    // Handle specific Firebase Auth errors
+    if (error.code === 'auth/email-already-exists') {
+      throw new functions.https.HttpsError('already-exists', 'An account with this email already exists');
+    }
+    if (error.code === 'auth/invalid-email') {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid email address');
+    }
+    if (error.code === 'auth/weak-password') {
+      throw new functions.https.HttpsError('invalid-argument', 'Password is too weak');
+    }
+    
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
