@@ -37,12 +37,28 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.background,
-      appBar: _buildAppBar(isDark),
-      drawer: _buildDrawer(isDark),
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-      bottomNavigationBar: _buildBottomNav(isDark),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // If not on home tab (Dashboard), go back to home
+        if (_selectedIndex != 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+
+        // On home tab - show logout confirmation
+        await _logout();
+      },
+      child: Scaffold(
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.background,
+        appBar: _buildAppBar(isDark),
+        drawer: _buildDrawer(isDark),
+        body: IndexedStack(index: _selectedIndex, children: _pages),
+        bottomNavigationBar: _buildBottomNav(isDark),
+      ),
     );
   }
 
