@@ -32,9 +32,9 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
   final _searchController = TextEditingController();
   bool _isLoading = false;
 
-  // Default to a location in Philippines (SPCF area)
-  static const _defaultLat = 15.0794;
-  static const _defaultLng = 120.6200;
+  // Default to Systems Plus College, Balibago, Angeles City, Pampanga
+  static const _defaultLat = 15.1350;
+  static const _defaultLng = 120.5927;
 
   @override
   void initState() {

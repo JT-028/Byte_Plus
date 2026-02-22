@@ -63,8 +63,8 @@ class _LocationGuardState extends State<LocationGuard> {
       // Load geofence settings from Firestore
       final cfg =
           await FirebaseFirestore.instance
-              .collection('settings')
-              .doc('geofence')
+              .collection('geofence')
+              .doc('campus')
               .get();
 
       if (!cfg.exists) {

@@ -6,12 +6,12 @@ class FirestoreService {
   Future<Map<String, dynamic>?> getGeofenceSettings() async {
     try {
       final DocumentSnapshot snapshot =
-          await _firestore.collection('settings').doc('geofence').get();
+          await _firestore.collection('geofence').doc('campus').get();
 
       if (snapshot.exists) {
         return snapshot.data() as Map<String, dynamic>;
       } else {
-        print("⚠️ Firestore document 'settings/geofence' not found.");
+        print("⚠️ Firestore document 'geofence/campus' not found.");
         return null;
       }
     } catch (e) {

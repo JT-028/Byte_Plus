@@ -24,9 +24,9 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // Default to a location in Philippines (SPCF area)
-  static const _defaultLat = 15.0794;
-  static const _defaultLng = 120.6200;
+  // Default to Systems Plus College, Balibago, Angeles City, Pampanga
+  static const _defaultLat = 15.1350;
+  static const _defaultLng = 120.5927;
 
   @override
   void initState() {
@@ -39,8 +39,8 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
     try {
       final doc =
           await FirebaseFirestore.instance
-              .collection('settings')
-              .doc('geofence')
+              .collection('geofence')
+              .doc('campus')
               .get();
 
       if (doc.exists) {
@@ -88,8 +88,8 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
     setState(() => _isSaving = true);
     try {
       await FirebaseFirestore.instance
-          .collection('settings')
-          .doc('geofence')
+          .collection('geofence')
+          .doc('campus')
           .set({
             'enabled': _isEnabled,
             'latitude': _selectedLocation!.latitude,
