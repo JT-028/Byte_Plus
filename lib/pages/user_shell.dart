@@ -17,6 +17,7 @@ import 'product_page.dart';
 import 'profile_page.dart';
 import 'order_page.dart';
 import 'notifications_page.dart';
+import 'login_page.dart';
 
 class UserShell extends StatefulWidget {
   const UserShell({super.key});
@@ -167,21 +168,116 @@ class _UserShellState extends State<UserShell>
     super.build(context); // required for AutomaticKeepAliveClientMixin
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
-      body: SafeArea(
-        child: IndexedStack(
-          index: selectedNav,
-          children: [
-            _dashboardUI(isDark),
-            CartPage(onBrowse: () => setState(() => selectedNav = 0)),
-            const OrdersPage(),
-            const ProfilePage(),
-          ],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        // If not on home tab, go back to home
+        if (selectedNav != 0) {
+          setState(() => selectedNav = 0);
+          return;
+        }
+
+        // On home tab - show logout confirmation
+        final ok = await AppModalDialog.confirm(
+          context: context,
+          title: 'Log Out?',
+          message: 'Are you sure you want to log out?',
+          confirmLabel: 'Yes, Log Out',
+          cancelLabel: 'Cancel',
+        );
+
+        if (ok != true) return;
+
+        // Show loading overlay
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          barrierColor: Colors.black87,
+          builder:
+              (context) => PopScope(
+                canPop: false,
+                child: Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 40),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 28,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.surfaceDark : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3.5,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Logging out',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                              decoration: TextDecoration.none,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+        );
+
+        await Future.delayed(const Duration(milliseconds: 800));
+        await FirebaseAuth.instance.signOut();
+
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+          (route) => false,
+        );
+      },
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: isDark ? AppColors.primaryLight : AppColors.primary,
+        body: SafeArea(
+          child: IndexedStack(
+            index: selectedNav,
+            children: [
+              _dashboardUI(isDark),
+              CartPage(onBrowse: () => setState(() => selectedNav = 0)),
+              const OrdersPage(),
+              const ProfilePage(),
+            ],
+          ),
         ),
+        bottomNavigationBar: _bottomNav(isDark),
       ),
-      bottomNavigationBar: _bottomNav(isDark),
     );
   }
 
