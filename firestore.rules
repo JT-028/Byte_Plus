@@ -1,0 +1,305 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== HELPERS ====================
+    function signedIn() { return request.auth != null; }
+    function uid()      { return request.auth.uid; }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(uid()))
+        && userDoc().role == 'admin';
+    }
+
+    function isStaff() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(uid()))
+        && userDoc().role == 'staff';
+    }
+
+    function staffForThisStore(storeId) {
+      return isStaff() && userDoc().storeId == storeId;
+    }
+
+    // Fields staff may touch when updating an order's status
+    function staffAllowedOrderUpdateKeys() {
+      return [
+        'status', 'statusUpdatedAt',
+        'acceptedAt',  'acceptedBy',  'acceptedByRole',
+        'readyAt',     'readyBy',     'readyByRole',
+        'completedAt', 'completedBy', 'completedByRole',
+        'cancelledAt', 'cancelledBy', 'cancelledByRole', 'cancelReason',
+        'updatedAt', 'lastUpdatedAt', 'lastUpdatedBy', 'lastUpdatedByRole'
+      ];
+    }
+
+    // Valid order-status transitions for staff
+    function staffValidTransition(oldS, newS) {
+      return (oldS == newS)
+          || (oldS == 'to-do'       && newS in ['in-progress', 'cancelled', 'ready'])
+          || (oldS == 'in-progress' && newS in ['ready', 'cancelled'])
+          || (oldS == 'ready'       && newS in ['done', 'cancelled']);
+    }
+
+    function staffOrderUpdateOk() {
+      return request.resource.data.diff(resource.data)
+              .changedKeys()
+              .hasOnly(staffAllowedOrderUpdateKeys())
+          && staffValidTransition(
+               resource.data.status,
+               request.resource.data.status);
+    }
+
+    // ================= Notifications ===================
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // ==================== CONFIG ====================
+    match /config/{docId} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // Order-counter: any signed-in user may atomically increment
+    match /config/orderCounter {
+      allow read: if signedIn();
+
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data)
+            .changedKeys().hasOnly(['number', 'seq', 'prefix'])
+        && resource.data.number is int
+        && resource.data.seq    is int
+        && request.resource.data.number is int
+        && request.resource.data.seq    is int
+        && request.resource.data.prefix is string
+        && (
+             (resource.data.number >= 1
+               && resource.data.number <= 98
+               && request.resource.data.number == resource.data.number + 1
+               && request.resource.data.seq    == resource.data.seq)
+             ||
+             (resource.data.number == 99
+               && request.resource.data.number == 1
+               && request.resource.data.seq    == resource.data.seq + 1)
+           );
+
+      allow create: if isAdmin();
+    }
+
+    // ==================== GEOFENCE ====================
+    match /geofence/{docId} {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ==================== USERS ====================
+    match /users/{userId} {
+      // Own doc, admin, or staff (staff needs customer names for orders)
+      allow read: if signedIn()
+        && (userId == uid() || isAdmin() || isStaff());
+
+      // Self-create with role = student only
+      allow create: if signedIn()
+        && userId == uid()
+        && request.resource.data.role == 'student';
+
+      // User creating own doc on behalf of admin (admin created auth, now user creates Firestore doc)
+      // This is needed because createUserWithEmailAndPassword switches auth to the new user
+      allow create: if signedIn()
+        && userId == uid()
+        && request.resource.data.createdBy != null
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.createdBy))
+        && get(/databases/$(database)/documents/users/$(request.resource.data.createdBy)).data.role == 'admin';
+
+      // Admin can create any user
+      allow create: if isAdmin();
+
+      // Self-update but cannot change own role
+      allow update: if signedIn()
+        && userId == uid()
+        && request.resource.data.role == resource.data.role;
+
+      // Admin full control
+      allow update, delete: if isAdmin();
+
+      // ---------- favorites ----------
+      match /favorites/{fId} {
+        allow read, write: if signedIn() && userId == uid();
+        // Admin can also delete favorites when deleting user
+        allow read, delete: if isAdmin();
+      }
+
+      // ---------- cartItems ----------
+      match /cartItems/{itemId} {
+        allow read, create, update, delete: if signedIn() && userId == uid();
+        // Admin can also delete cart items when deleting user
+        allow read, delete: if isAdmin();
+      }
+
+      // ---------- user notifications ----------
+      match /notifications/{nId} {
+        allow read, update, delete: if signedIn() && userId == uid();
+        allow create: if signedIn();
+        // Admin can also delete notifications when deleting user
+        allow read, delete: if isAdmin();
+      }
+
+      // ---------- user-scoped orders ----------
+      match /orders/{orderId} {
+        allow read: if signedIn()
+          && (userId == uid() || isAdmin() || isStaff());
+
+        allow create: if signedIn()
+          && userId == uid()
+          && request.resource.data.userId == uid();
+
+        // Student cancels own to-do order
+        allow update: if signedIn()
+          && resource.data.userId == uid()
+          && resource.data.status == 'to-do'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data)
+              .changedKeys()
+              .hasOnly(['status', 'cancelledAt', 'cancelledBy']);
+
+        // Staff updates order belonging to their store
+        allow update: if staffForThisStore(resource.data.storeId)
+          && staffOrderUpdateOk();
+
+        allow update, delete: if isAdmin();
+      }
+
+      // ---------- user notifications ----------
+      match /notifications/{nId} {
+        allow read, update, delete: if signedIn() && userId == uid();
+        allow create: if signedIn();
+      }
+    }
+
+    // ==================== STORES ====================
+    match /stores/{storeId} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+
+      // Admin can update anything
+      allow update: if isAdmin();
+
+      // Staff can update operating hours on their own store
+      allow update: if staffForThisStore(storeId)
+        && request.resource.data.diff(resource.data)
+            .changedKeys()
+            .hasOnly(['openingTime', 'closingTime']);
+
+      // ---------- menu items ----------
+      match /menu/{itemId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin() || staffForThisStore(storeId);
+      }
+
+      // ---------- categories ----------
+      match /categories/{catId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin() || staffForThisStore(storeId);
+      }
+
+      // ---------- variations ----------
+      match /variations/{varId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin() || staffForThisStore(storeId);
+      }
+
+      // ---------- choiceGroups ----------
+      match /choiceGroups/{groupId} {
+        allow read: if signedIn();
+        allow create, update, delete: if isAdmin() || staffForThisStore(storeId);
+      }
+
+      // ---------- store-scoped orders ----------
+      match /orders/{orderId} {
+        allow read: if signedIn()
+          && (isAdmin()
+              || staffForThisStore(storeId)
+              || resource.data.userId == uid());
+
+        allow create: if signedIn()
+          && request.resource.data.userId == uid()
+          && request.resource.data.storeId == storeId;
+
+        // Student cancels own to-do order
+        allow update: if signedIn()
+          && resource.data.userId == uid()
+          && resource.data.status == 'to-do'
+          && request.resource.data.status == 'cancelled'
+          && request.resource.data.diff(resource.data)
+              .changedKeys()
+              .hasOnly(['status', 'cancelledAt', 'cancelledBy']);
+
+        // Staff updates for their store
+        allow update: if staffForThisStore(storeId)
+          && staffOrderUpdateOk();
+
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ==================== GLOBAL MENU ====================
+    match /menu/{menuId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ==================== GLOBAL ORDERS ====================
+    match /orders/{orderId} {
+      allow read: if signedIn()
+        && (isAdmin()
+            || resource.data.userId == uid()
+            || staffForThisStore(resource.data.storeId));
+
+      allow create: if signedIn()
+        && request.resource.data.userId == uid();
+
+      // Student cancels own to-do
+      allow update: if signedIn()
+        && resource.data.userId == uid()
+        && resource.data.status == 'to-do'
+        && request.resource.data.status == 'cancelled'
+        && request.resource.data.diff(resource.data)
+            .changedKeys()
+            .hasOnly(['status', 'cancelledAt', 'cancelledBy']);
+
+      // Staff update
+      allow update: if staffForThisStore(resource.data.storeId)
+        && staffOrderUpdateOk();
+
+      allow update, delete: if isAdmin();
+    }
+
+    // ==================== NOTIFICATIONS (top-level) ====================
+    match /notifications/{nId} {
+      allow read:  if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // ==================== PASSWORD REQUESTS ====================
+    match /passwordRequests/{reqId} {
+      // Anyone can submit a request (even unauthenticated users who forgot password)
+      allow create: if true;
+
+      // Admin can read, approve/reject, delete
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

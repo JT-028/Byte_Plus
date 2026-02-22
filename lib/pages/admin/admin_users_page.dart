@@ -614,6 +614,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             .createUserWithEmailAndPassword(email: email, password: password);
 
         // Create Firestore document for the new user
+        // Admin-created accounts are automatically verified
         await FirebaseFirestore.instance
             .collection('users')
             .doc(credential.user!.uid)
@@ -621,6 +622,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               'name': name,
               'email': email,
               'role': role,
+              'emailVerified': true, // Admin-created accounts are pre-verified
+              'status': 'active',
               'createdAt': FieldValue.serverTimestamp(),
               'createdBy': adminUid,
             });

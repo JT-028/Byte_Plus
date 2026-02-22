@@ -66,8 +66,21 @@ class _LoginPageState extends State<LoginPage> {
         password: password,
       );
 
-      // Check if email is verified
-      if (!userCred.user!.emailVerified) {
+      // Check Firestore document for admin-created accounts (pre-verified)
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userCred.user!.uid)
+              .get();
+
+      final userData = userDoc.data() ?? {};
+      final isAdminCreated = userData['createdBy'] != null;
+      final firestoreEmailVerified = userData['emailVerified'] == true;
+
+      // Check if email is verified (either via Firebase Auth or admin-created)
+      if (!userCred.user!.emailVerified &&
+          !isAdminCreated &&
+          !firestoreEmailVerified) {
         // Send another verification email
         await userCred.user!.sendEmailVerification();
         await FirebaseAuth.instance.signOut();
@@ -84,11 +97,13 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // Update emailVerified status in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCred.user!.uid)
-          .update({'emailVerified': true});
+      // Update emailVerified status in Firestore if not already set
+      if (!firestoreEmailVerified) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCred.user!.uid)
+            .update({'emailVerified': true});
+      }
 
       // Navigate to Splash which checks auth and routes to appropriate shell
       if (!mounted) return;
