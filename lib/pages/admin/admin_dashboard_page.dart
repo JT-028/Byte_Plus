@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:rxdart/rxdart.dart';
 
 import '../../theme/app_theme.dart';
 
@@ -127,17 +128,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Stream<List<QuerySnapshot>> _getCombinedStreams() {
-    return Stream.fromFuture(
-      Future.wait([
-        FirebaseFirestore.instance.collection('users').get(),
-        FirebaseFirestore.instance.collection('stores').get(),
-        FirebaseFirestore.instance.collection('orders').get(),
-        FirebaseFirestore.instance
-            .collection('passwordRequests')
-            .where('status', isEqualTo: 'pending')
-            .get(),
-      ]),
-    );
+    return CombineLatestStream.list([
+      FirebaseFirestore.instance.collection('users').snapshots(),
+      FirebaseFirestore.instance.collection('stores').snapshots(),
+      FirebaseFirestore.instance.collection('orders').snapshots(),
+      FirebaseFirestore.instance
+          .collection('passwordRequests')
+          .where('status', isEqualTo: 'pending')
+          .snapshots(),
+    ]);
   }
 
   Widget _statCard({

@@ -132,13 +132,8 @@ class _SplashPageState extends State<SplashPage>
         destination = const UserShell();
       }
 
-      // Wrap with LocationGuard (mock mode enabled for testing)
-      destination = LocationGuard(
-        useMock: true,
-        mockLat: 15.158503947241618, // School center coordinates for testing
-        mockLng: 120.59252284294321,
-        child: destination,
-      );
+      // Wrap with LocationGuard for geofence enforcement
+      destination = LocationGuard(child: destination);
 
       // Show location permission page for students
       // (merchants/admins may need different handling)

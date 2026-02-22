@@ -55,20 +55,25 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
             );
           }
         });
-
-        // Move map to saved location
-        if (_selectedLocation != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _mapController.move(_selectedLocation!, 15);
-          });
-        }
       }
+
+      // Always move map - to saved location if exists, otherwise to Systems Plus College
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(
+          _selectedLocation ?? LatLng(_defaultLat, _defaultLng),
+          15,
+        );
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error loading settings: $e')));
       }
+      // Even on error, center on default location
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(LatLng(_defaultLat, _defaultLng), 15);
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -129,10 +134,15 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
         desiredAccuracy: LocationAccuracy.high,
       );
 
+      if (!mounted) return;
+
       setState(() {
         _selectedLocation = LatLng(position.latitude, position.longitude);
       });
-      _mapController.move(_selectedLocation!, 15);
+
+      if (mounted) {
+        _mapController.move(_selectedLocation!, 15);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

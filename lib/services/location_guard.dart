@@ -12,17 +12,8 @@ import '../theme/app_theme.dart';
 
 class LocationGuard extends StatefulWidget {
   final Widget child;
-  final bool useMock;
-  final double? mockLat;
-  final double? mockLng;
 
-  const LocationGuard({
-    super.key,
-    required this.child,
-    this.useMock = false,
-    this.mockLat,
-    this.mockLng,
-  });
+  const LocationGuard({super.key, required this.child});
 
   @override
   State<LocationGuard> createState() => _LocationGuardState();
@@ -92,10 +83,8 @@ class _LocationGuardState extends State<LocationGuard> {
         return;
       }
 
-      // Ensure permissions (if not mock mode)
-      if (!widget.useMock) {
-        await _ensurePermissions();
-      }
+      // Ensure location permissions
+      await _ensurePermissions();
 
       // ✅ Check immediately once at startup
       await _checkLocation();
@@ -150,43 +139,17 @@ class _LocationGuardState extends State<LocationGuard> {
 
   Future<void> _checkLocation() async {
     try {
-      Position pos;
-
-      // ✅ Always prioritize mock coordinates when useMock is true
-      if (widget.useMock && widget.mockLat != null && widget.mockLng != null) {
-        pos = Position(
-          latitude: widget.mockLat!,
-          longitude: widget.mockLng!,
-          timestamp: DateTime.now(),
-          accuracy: 5,
-          altitude: 0,
-          heading: 0,
-          speed: 0,
-          speedAccuracy: 0,
-          altitudeAccuracy: 0,
-          headingAccuracy: 0,
-        );
-        debugPrint(
-          "[LocationGuard] Using MOCK coordinates: (${pos.latitude}, ${pos.longitude})",
-        );
-      } else {
-        pos = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
-        debugPrint(
-          "[LocationGuard] Using REAL coordinates: (${pos.latitude}, ${pos.longitude})",
-        );
-      }
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      debugPrint(
+        "[LocationGuard] Current coordinates: (${pos.latitude}, ${pos.longitude})",
+      );
 
       // ✅ Use Firestore settings (campus geofence)
       double lat = (_cfg?['latitude'] ?? 0).toDouble();
       double lng = (_cfg?['longitude'] ?? 0).toDouble();
       double radius = (_cfg?['radius'] ?? 500.0).toDouble();
-
-      // ✅ Allow wide radius in mock mode to avoid blocking while testing
-      if (widget.useMock) {
-        radius = 7000;
-      }
 
       final distance = Geolocator.distanceBetween(
         pos.latitude,

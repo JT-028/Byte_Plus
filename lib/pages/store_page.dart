@@ -266,7 +266,7 @@ class _StorePageState extends State<StorePage> {
                 isFav ? Iconsax.heart : Iconsax.heart,
                 _toggleFavorite,
                 isDark: isDark,
-                color: isFav ? AppColors.error : Colors.white,
+                color: isFav ? AppColors.error : Colors.grey,
               );
             },
           ),
