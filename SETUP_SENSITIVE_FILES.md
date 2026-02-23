@@ -23,12 +23,14 @@ cp firebase_options.dart.template lib/firebase_options.dart
 ### Step 3: Download Platform-Specific Files
 
 **Android:**
+
 1. In Firebase Console → Project Settings → Your Apps
 2. Select your Android app
 3. Click "Download google-services.json"
 4. Place it in `android/app/google-services.json`
 
 **iOS:**
+
 1. In Firebase Console → Project Settings → Your Apps
 2. Select your iOS app
 3. Click "Download GoogleService-Info.plist"
@@ -90,18 +92,20 @@ CLOUDINARY_CLOUD_NAME=your_cloudinary_name
 ## ⚠️ Important Reminders
 
 ### DO:
+
 ✅ Keep real credentials in local files only  
 ✅ Use template files for reference  
 ✅ Verify files are in .gitignore before committing  
 ✅ Use different Firebase projects for dev/staging/prod  
-✅ Share template files with team members  
+✅ Share template files with team members
 
 ### DON'T:
+
 ❌ Commit real credentials to version control  
 ❌ Share credentials in chat or email  
 ❌ Use production credentials for development  
 ❌ Hardcode API keys in source code  
-❌ Remove files from .gitignore  
+❌ Remove files from .gitignore
 
 ## 🔍 Verification Checklist
 
@@ -118,25 +122,30 @@ Before making your first commit:
 ## 🆘 Troubleshooting
 
 **Problem: "Firebase not initialized" error**
+
 - Solution: Ensure `firebase_options.dart` exists in `lib/` folder
 - Verify the values are correct (check Firebase Console)
 
 **Problem: "google-services.json not found"**
+
 - Solution: Download from Firebase Console and place in `android/app/`
 - Check file name is exactly `google-services.json` (no .txt extension)
 
 **Problem: Files appear in git status**
+
 - Solution: Ensure files are listed in `.gitignore`
 - Run: `git rm --cached path/to/file` to untrack
 - Commit the .gitignore changes
 
 **Problem: iOS build fails**
+
 - Solution: Ensure `GoogleService-Info.plist` is in `ios/Runner/`
 - Open Xcode and verify the file is added to the target
 
 ## 📞 Need Help?
 
 If you're stuck:
+
 1. Check [SECURITY.md](SECURITY.md) for detailed guidelines
 2. Review [README.md](README.md) Firebase Setup section
 3. Contact the development team

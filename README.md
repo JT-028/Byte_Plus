@@ -195,6 +195,7 @@ This will automatically generate `lib/firebase_options.dart`.
 **Manual Configuration:**
 
 1. Copy the template file:
+
    ```bash
    cp firebase_options.dart.template lib/firebase_options.dart
    ```
@@ -503,6 +504,7 @@ Action → Firestore Document → Cloud Function → FCM → User Device
 - `google-services.json.template` - Google services template
 
 **Before running the app:**
+
 1. Copy template files and remove `.template` extension
 2. Fill in your actual Firebase credentials
 3. Ensure real config files are in `.gitignore`

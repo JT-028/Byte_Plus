@@ -5,29 +5,34 @@ This document outlines security best practices and sensitive files that must be 
 ## 🔒 Critical: Never Commit These Files
 
 ### Firebase Configuration
+
 - `/lib/firebase_options.dart` - Contains Firebase API keys and project IDs
 - `/android/app/google-services.json` - Android Firebase configuration
 - `/ios/Runner/GoogleService-Info.plist` - iOS Firebase configuration
 - `/web/firebase-config.js` - Web Firebase configuration
 
 ### Service Account Keys
+
 - `serviceAccountKey.json` - Firebase Admin SDK credentials
 - Any file matching `*-firebase-adminsdk-*.json`
 - `serviceAccount*.json` - Any service account credentials
 
 ### Environment Variables
+
 - `.env` - Environment variables for any environment
 - `.env.local` - Local development environment variables
 - `.env.production` - Production secrets
 - `functions/.env` - Cloud Functions environment variables
 
 ### API Keys & Credentials
+
 - `**/api_keys.dart` - Hardcoded API keys
 - `**/secrets.dart` - Application secrets
 - `**/credentials.json` - Authentication credentials
 - `cloudinary_config.dart` - Cloudinary API credentials
 
 ### Local Configuration
+
 - `local.properties` - Android local SDK paths (may contain sensitive info)
 - `keystore.properties` - Android signing keys
 - `key.properties` - Signing configuration
@@ -43,6 +48,7 @@ This document outlines security best practices and sensitive files that must be 
 ## 🛡️ Security Best Practices
 
 ### 1. Use Environment Variables
+
 Instead of hardcoding secrets, use environment variables:
 
 ```dart
@@ -54,6 +60,7 @@ const apiKey = String.fromEnvironment('API_KEY');
 ```
 
 ### 2. Create Template Files
+
 Create template files without secrets for reference:
 
 ```bash
@@ -64,25 +71,31 @@ cp .env .env.template
 ```
 
 Example `.env.template`:
+
 ```
 FIREBASE_API_KEY=your_api_key_here
 CLOUDINARY_CLOUD_NAME=your_cloud_name_here
 ```
 
 ### 3. Configure Firebase App Check
+
 Enable Firebase App Check to prevent unauthorized API usage:
+
 1. Go to Firebase Console → App Check
 2. Enable App Check for your apps
 3. Configure SafetyNet (Android) and DeviceCheck (iOS)
 
 ### 4. Restrict Firebase API Keys
+
 In Google Cloud Console:
+
 1. Navigate to APIs & Services → Credentials
 2. Select your Firebase API key
 3. Add application restrictions (Android apps, iOS apps, websites)
 4. Add API restrictions (only enable required APIs)
 
 ### 5. Use Firestore Security Rules
+
 Always enforce security rules in Firestore:
 
 ```javascript
@@ -93,7 +106,9 @@ match /users/{userId} {
 ```
 
 ### 6. Rotate Compromised Keys Immediately
+
 If any key is accidentally committed:
+
 1. Revoke the compromised key immediately
 2. Generate new credentials
 3. Update all environments
@@ -107,6 +122,7 @@ If any key is accidentally committed:
 ## 🔍 Checking for Exposed Secrets
 
 ### Before Committing
+
 ```bash
 # Check what will be committed
 git status
@@ -117,6 +133,7 @@ git check-ignore -v path/to/file
 ```
 
 ### Scan Repository
+
 Use tools to scan for secrets:
 
 ```bash
@@ -130,7 +147,9 @@ git-secrets --scan-history
 ```
 
 ### GitHub Secret Scanning
+
 GitHub automatically scans for known secret patterns. If secrets are detected:
+
 1. You'll receive an alert
 2. Revoke the secrets immediately
 3. Remove from history
@@ -156,17 +175,19 @@ Before deploying or sharing code:
 1. **Don't panic, but act fast**
 2. **Revoke the secret immediately** in Firebase/Cloud Console
 3. **Remove from git history**:
+
    ```bash
    # Install BFG Repo-Cleaner
    brew install bfg  # or download from https://rtyley.github.io/bfg-repo-cleaner/
-   
+
    # Remove the sensitive file
    bfg --delete-files firebase_options.dart
-   
+
    # Clean up
    git reflog expire --expire=now --all
    git gc --prune=now --aggressive
    ```
+
 4. **Force push** (if remote):
    ```bash
    git push --force --all
@@ -178,6 +199,7 @@ Before deploying or sharing code:
 ## 📞 Reporting Security Issues
 
 If you discover a security vulnerability:
+
 - **DO NOT** open a public issue
 - **DO NOT** share details publicly
 - Email: security@byteplus.com
@@ -186,6 +208,7 @@ If you discover a security vulnerability:
 ## 🔐 Production Security
 
 ### Before Production Deployment:
+
 1. Use Firebase Blaze plan (for security features)
 2. Enable App Check
 3. Configure rate limiting in Cloud Functions
