@@ -67,3 +67,4 @@ class CookingLoaderOverlay extends StatelessWidget {
     );
   }
 }
+

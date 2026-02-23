@@ -249,8 +249,8 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                       decoration: BoxDecoration(
                         color:
                             _isEnabled
-                                ? AppColors.primary.withOpacity(0.1)
-                                : Colors.grey.withOpacity(0.1),
+                                ? AppColors.primary.withValues(alpha: 0.1)
+                                : Colors.grey.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -293,7 +293,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                     Switch(
                       value: _isEnabled,
                       onChanged: (value) => setState(() => _isEnabled = value),
-                      activeColor: AppColors.primary,
+                      activeThumbColor: AppColors.primary,
                     ),
                   ],
                 ),
@@ -328,7 +328,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                           point: _selectedLocation!,
                           radius: _radius,
                           useRadiusInMeter: true,
-                          color: AppColors.primary.withOpacity(0.2),
+                          color: AppColors.primary.withValues(alpha: 0.2),
                           borderColor: AppColors.primary,
                           borderStrokeWidth: 2,
                         ),
@@ -348,7 +348,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: Colors.black.withValues(alpha: 0.2),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -379,7 +379,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -463,7 +463,7 @@ class _AdminGeofenceSettingsPageState extends State<AdminGeofenceSettingsPage> {
             color: isDark ? AppColors.surfaceDark : Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -4),
               ),

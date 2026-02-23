@@ -466,3 +466,4 @@ class _CheckPainter extends CustomPainter {
     return oldDelegate.progress != progress;
   }
 }
+

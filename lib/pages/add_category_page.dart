@@ -334,3 +334,4 @@ class _AddCategoryPageState extends State<AddCategoryPage> {
     }
   }
 }
+

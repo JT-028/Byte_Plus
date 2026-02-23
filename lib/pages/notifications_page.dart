@@ -200,8 +200,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
               decoration: BoxDecoration(
                 color:
                     isDark
-                        ? AppColors.primaryLight.withOpacity(0.1)
-                        : AppColors.primary.withOpacity(0.1),
+                        ? AppColors.primaryLight.withValues(alpha: 0.1)
+                        : AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -309,8 +309,8 @@ class _NotificationTile extends StatelessWidget {
               isRead
                   ? Colors.transparent
                   : (isDark
-                      ? AppColors.primaryLight.withOpacity(0.08)
-                      : AppColors.primary.withOpacity(0.05)),
+                      ? AppColors.primaryLight.withValues(alpha: 0.08)
+                      : AppColors.primary.withValues(alpha: 0.05)),
           border: Border(
             bottom: BorderSide(
               color: isDark ? AppColors.borderDark : Colors.grey.shade200,
@@ -324,7 +324,7 @@ class _NotificationTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _iconColor.withOpacity(0.1),
+                color: _iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(_icon, size: 22, color: _iconColor),
@@ -397,3 +397,4 @@ class _NotificationTile extends StatelessWidget {
     );
   }
 }
+

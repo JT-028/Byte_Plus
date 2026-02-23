@@ -687,3 +687,4 @@ class ReceiptItem {
     this.choiceGroups,
   });
 }
+

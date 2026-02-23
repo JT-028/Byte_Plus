@@ -35,3 +35,4 @@ class ThemeService extends ChangeNotifier {
     await setThemeMode(newMode);
   }
 }
+

@@ -121,3 +121,4 @@ class _FoodDetailPopupState extends State<FoodDetailPopup> {
     );
   }
 }
+

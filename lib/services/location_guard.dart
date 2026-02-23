@@ -311,3 +311,4 @@ class _LocationGuardState extends State<LocationGuard> {
     return widget.child;
   }
 }
+

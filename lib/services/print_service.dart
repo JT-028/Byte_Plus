@@ -342,3 +342,4 @@ class ReceiptItem {
     this.note = '',
   });
 }
+

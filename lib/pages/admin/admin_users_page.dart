@@ -285,7 +285,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: _roleColor(role).withOpacity(0.1),
+              color: _roleColor(role).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
@@ -355,7 +355,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: _roleColor(role).withOpacity(0.1),
+              color: _roleColor(role).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -913,7 +913,7 @@ class _AssignStoreSheetState extends State<_AssignStoreSheet> {
         decoration: BoxDecoration(
           color:
               isSelected
-                  ? AppColors.primary.withOpacity(0.1)
+                  ? AppColors.primary.withValues(alpha: 0.1)
                   : (isDark ? AppColors.backgroundDark : AppColors.background),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -1343,7 +1343,7 @@ class _CreateEditUserSheetState extends State<_CreateEditUserSheet> {
           decoration: BoxDecoration(
             color:
                 isSelected
-                    ? AppColors.primary.withOpacity(0.1)
+                    ? AppColors.primary.withValues(alpha: 0.1)
                     : (widget.isDark
                         ? AppColors.backgroundDark
                         : AppColors.background),
@@ -1394,3 +1394,4 @@ class _CreateEditUserSheetState extends State<_CreateEditUserSheet> {
     }
   }
 }
+

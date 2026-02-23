@@ -414,7 +414,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
-              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+              isDark
+                  ? AppColors.borderDark
+                  : AppColors.border.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -469,7 +471,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
-              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+              isDark
+                  ? AppColors.borderDark
+                  : AppColors.border.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -617,7 +621,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       height: 8,
       decoration: BoxDecoration(
         color:
-            isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.3),
+            isDark
+                ? AppColors.borderDark
+                : AppColors.border.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
       ),
       child: FractionallySizedBox(
@@ -650,7 +656,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color:
-              isDark ? AppColors.borderDark : AppColors.border.withOpacity(0.5),
+              isDark
+                  ? AppColors.borderDark
+                  : AppColors.border.withValues(alpha: 0.5),
         ),
       ),
       child: Column(
@@ -767,8 +775,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                               ? AppColors.merchantPrimary
                                               : (isDark
                                                   ? AppColors.borderDark
-                                                  : AppColors.border
-                                                      .withOpacity(0.5)),
+                                                  : AppColors.border.withValues(
+                                                    alpha: 0.5,
+                                                  )),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),

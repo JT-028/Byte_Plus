@@ -53,3 +53,4 @@ class PickupNumberService {
     return String.fromCharCodes(chars);
   }
 }
+

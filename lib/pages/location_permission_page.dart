@@ -357,7 +357,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
           height: 140,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
           ),
         ),
         // Middle ring
@@ -366,7 +366,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
           height: 110,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(0.15),
+            color: AppColors.primary.withValues(alpha: 0.15),
           ),
         ),
         // Inner circle with icon
@@ -378,7 +378,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
             color: AppColors.primary,
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -405,7 +405,7 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 20),
@@ -424,3 +424,4 @@ class _LocationPermissionPageState extends State<LocationPermissionPage>
     );
   }
 }
+

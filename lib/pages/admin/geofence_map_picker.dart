@@ -184,7 +184,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
                           point: _selectedLocation,
                           radius: _radius,
                           useRadiusInMeter: true,
-                          color: AppColors.primary.withOpacity(0.2),
+                          color: AppColors.primary.withValues(alpha: 0.2),
                           borderColor: AppColors.primary,
                           borderStrokeWidth: 2,
                         ),
@@ -206,7 +206,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
+                                      color: Colors.black.withValues(alpha: 0.2),
                                       blurRadius: 6,
                                       offset: const Offset(0, 2),
                                     ),
@@ -286,7 +286,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
               color: isDark ? AppColors.surfaceDark : Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -360,9 +360,9 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
                 SliderTheme(
                   data: SliderTheme.of(context).copyWith(
                     activeTrackColor: AppColors.primary,
-                    inactiveTrackColor: AppColors.primary.withOpacity(0.2),
+                    inactiveTrackColor: AppColors.primary.withValues(alpha: 0.2),
                     thumbColor: AppColors.primary,
-                    overlayColor: AppColors.primary.withOpacity(0.1),
+                    overlayColor: AppColors.primary.withValues(alpha: 0.1),
                   ),
                   child: Slider(
                     value: _radius,
@@ -429,7 +429,7 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.info.withOpacity(0.1),
+                    color: AppColors.info.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -499,3 +499,4 @@ class _GeofenceMapPickerState extends State<GeofenceMapPicker> {
     );
   }
 }
+

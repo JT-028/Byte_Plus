@@ -399,10 +399,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   decoration: BoxDecoration(
                     color:
                         isDark
-                            ? AppColors.info.withOpacity(0.1)
-                            : AppColors.info.withOpacity(0.08),
+                            ? AppColors.info.withValues(alpha: 0.1)
+                            : AppColors.info.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -536,7 +536,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 isSelected
                     ? [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: AppColors.primary.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -577,3 +577,4 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+

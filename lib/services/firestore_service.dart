@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -11,12 +12,13 @@ class FirestoreService {
       if (snapshot.exists) {
         return snapshot.data() as Map<String, dynamic>;
       } else {
-        print("⚠️ Firestore document 'geofence/campus' not found.");
+        debugPrint("⚠️ Firestore document 'geofence/campus' not found.");
         return null;
       }
     } catch (e) {
-      print("🔥 Firestore error: $e");
+      debugPrint("🔥 Firestore error: $e");
       return null;
     }
   }
 }
+

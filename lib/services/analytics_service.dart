@@ -468,3 +468,4 @@ class DailyRevenue {
     required this.orderCount,
   });
 }
+

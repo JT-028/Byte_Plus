@@ -291,7 +291,7 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -345,7 +345,7 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -467,7 +467,7 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
             decoration: BoxDecoration(
               color:
                   isConnected
-                      ? AppColors.success.withOpacity(0.1)
+                      ? AppColors.success.withValues(alpha: 0.1)
                       : (isDark
                           ? AppColors.backgroundDark
                           : AppColors.background),

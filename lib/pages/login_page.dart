@@ -571,10 +571,10 @@ class _LoginPageState extends State<LoginPage> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.error.withOpacity(0.3),
+                        color: AppColors.error.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Row(
@@ -600,7 +600,7 @@ class _LoginPageState extends State<LoginPage> {
                               Text(
                                 'Try again in ${_formatRemainingTime()}',
                                 style: TextStyle(
-                                  color: AppColors.error.withOpacity(0.8),
+                                  color: AppColors.error.withValues(alpha: 0.8),
                                   fontSize: 12,
                                 ),
                               ),
@@ -800,3 +800,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

@@ -60,10 +60,7 @@ class _ProductSheetState extends State<ProductSheet> {
             /// PRICE
             Text(
               "₱ ${data["price"]}",
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
 
             const SizedBox(height: 16),
@@ -76,15 +73,23 @@ class _ProductSheetState extends State<ProductSheet> {
 
             const SizedBox(height: 12),
             _buildSectionTitle("Sugar"),
-            _buildOptionSelector(["Normal", "Less Sugar", "Extra Sugar"], selectedSugar, (val) {
-              setState(() => selectedSugar = val);
-            }),
+            _buildOptionSelector(
+              ["Normal", "Less Sugar", "Extra Sugar"],
+              selectedSugar,
+              (val) {
+                setState(() => selectedSugar = val);
+              },
+            ),
 
             const SizedBox(height: 12),
             _buildSectionTitle("Ice"),
-            _buildOptionSelector(["Normal", "Less Ice", "More Ice"], selectedIce, (val) {
-              setState(() => selectedIce = val);
-            }),
+            _buildOptionSelector(
+              ["Normal", "Less Ice", "More Ice"],
+              selectedIce,
+              (val) {
+                setState(() => selectedIce = val);
+              },
+            ),
 
             const SizedBox(height: 20),
 
@@ -101,7 +106,10 @@ class _ProductSheetState extends State<ProductSheet> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     quantity.toString(),
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 _smallCircleButton(Icons.add, () {
@@ -124,12 +132,17 @@ class _ProductSheetState extends State<ProductSheet> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Add to Cart",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
+                child:
+                    isSaving
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                          "Add to Cart",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
               ),
             ),
 
@@ -159,7 +172,8 @@ class _ProductSheetState extends State<ProductSheet> {
 
     try {
       /// Check if same combination already exists
-      final existing = await cartRef.where("mergeKey", isEqualTo: mergeKey).get();
+      final existing =
+          await cartRef.where("mergeKey", isEqualTo: mergeKey).get();
 
       if (existing.docs.isNotEmpty) {
         /// MERGE
@@ -187,9 +201,8 @@ class _ProductSheetState extends State<ProductSheet> {
       }
 
       if (mounted) Navigator.pop(context);
-
     } catch (e) {
-      print("CART ERROR: $e");
+      debugPrint("CART ERROR: $e");
     }
 
     if (mounted) setState(() => isSaving = false);
@@ -206,21 +219,26 @@ class _ProductSheetState extends State<ProductSheet> {
     );
   }
 
-  Widget _buildOptionSelector(List<String> options, String selected, Function(String) onSelect) {
+  Widget _buildOptionSelector(
+    List<String> options,
+    String selected,
+    Function(String) onSelect,
+  ) {
     return Wrap(
       spacing: 10,
-      children: options.map((opt) {
-        final bool isActive = (opt == selected);
-        return ChoiceChip(
-          label: Text(opt),
-          selected: isActive,
-          selectedColor: Colors.blue,
-          labelStyle: TextStyle(
-            color: isActive ? Colors.white : Colors.black,
-          ),
-          onSelected: (_) => onSelect(opt),
-        );
-      }).toList(),
+      children:
+          options.map((opt) {
+            final bool isActive = (opt == selected);
+            return ChoiceChip(
+              label: Text(opt),
+              selected: isActive,
+              selectedColor: Colors.blue,
+              labelStyle: TextStyle(
+                color: isActive ? Colors.white : Colors.black,
+              ),
+              onSelected: (_) => onSelect(opt),
+            );
+          }).toList(),
     );
   }
 
@@ -238,3 +256,4 @@ class _ProductSheetState extends State<ProductSheet> {
     );
   }
 }
+

@@ -254,3 +254,4 @@ extension NavigatorExtensions on NavigatorState {
     return push(SlideUpRoute<T>(page: page));
   }
 }
+

@@ -394,3 +394,4 @@ class _SearchTextFieldState extends State<_SearchTextField> {
     );
   }
 }
+

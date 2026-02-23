@@ -115,3 +115,4 @@ class InventoryService {
     return query.snapshots();
   }
 }
+

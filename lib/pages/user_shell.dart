@@ -73,8 +73,9 @@ class _UserShellState extends State<UserShell>
   }
 
   bool _isStoreOpen(String? openingTime, String? closingTime) {
-    if (openingTime == null || closingTime == null)
+    if (openingTime == null || closingTime == null) {
       return true; // Open if no hours set
+    }
     if (!openingTime.contains(':') || !closingTime.contains(':')) return true;
 
     try {
@@ -212,7 +213,7 @@ class _UserShellState extends State<UserShell>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -355,7 +356,7 @@ class _UserShellState extends State<UserShell>
                     Text(
                       "What are you craving?",
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                     ),
@@ -380,7 +381,7 @@ class _UserShellState extends State<UserShell>
                       width: 42,
                       height: 42,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Stack(
@@ -428,7 +429,7 @@ class _UserShellState extends State<UserShell>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     width: 2,
                   ),
                 ),
@@ -443,7 +444,7 @@ class _UserShellState extends State<UserShell>
                         (_, __, ___) => Container(
                           width: 48,
                           height: 48,
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           child: const Icon(Iconsax.user, color: Colors.white),
                         ),
                   ),
@@ -458,7 +459,7 @@ class _UserShellState extends State<UserShell>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -539,7 +540,7 @@ class _UserShellState extends State<UserShell>
                     selected
                         ? [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -820,7 +821,9 @@ class _UserShellState extends State<UserShell>
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.2 : 0.06,
+                          ),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -991,7 +994,9 @@ class _UserShellState extends State<UserShell>
                   isOpen
                       ? [
                         BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+                          color: Colors.black.withValues(
+                            alpha: isDark ? 0.2 : 0.06,
+                          ),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -1009,7 +1014,7 @@ class _UserShellState extends State<UserShell>
                             isOpen
                                 ? [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 6,
                                     offset: const Offset(0, 2),
                                   ),
@@ -1096,7 +1101,9 @@ class _UserShellState extends State<UserShell>
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.error.withOpacity(0.1),
+                                    color: AppColors.error.withValues(
+                                      alpha: 0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Row(
@@ -1196,7 +1203,7 @@ class _UserShellState extends State<UserShell>
                             decoration: BoxDecoration(
                               color:
                                   isFav
-                                      ? AppColors.error.withOpacity(0.1)
+                                      ? AppColors.error.withValues(alpha: 0.1)
                                       : (isDark
                                           ? AppColors.surfaceVariantDark
                                           : Colors.grey.shade100),
@@ -1260,7 +1267,7 @@ class _UserShellState extends State<UserShell>
         color: isDark ? AppColors.surfaceDark : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.06),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.06),
             blurRadius: 12,
             offset: const Offset(0, -2),
           ),
@@ -1537,8 +1544,8 @@ class _CartPageState extends State<CartPage> {
               decoration: BoxDecoration(
                 color:
                     isDark
-                        ? AppColors.primaryLight.withOpacity(0.1)
-                        : AppColors.primary.withOpacity(0.1),
+                        ? AppColors.primaryLight.withValues(alpha: 0.1)
+                        : AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -1807,8 +1814,8 @@ class _CartPageState extends State<CartPage> {
                 decoration: BoxDecoration(
                   color:
                       isDark
-                          ? AppColors.primaryLight.withOpacity(0.1)
-                          : AppColors.primary.withOpacity(0.1),
+                          ? AppColors.primaryLight.withValues(alpha: 0.1)
+                          : AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1927,8 +1934,8 @@ class _CartPageState extends State<CartPage> {
           color:
               isSelected
                   ? (isDark
-                      ? AppColors.primaryLight.withOpacity(0.15)
-                      : AppColors.primary.withOpacity(0.1))
+                      ? AppColors.primaryLight.withValues(alpha: 0.15)
+                      : AppColors.primary.withValues(alpha: 0.1))
                   : (isDark
                       ? AppColors.surfaceVariantDark
                       : Colors.grey.shade200),
@@ -2249,7 +2256,7 @@ class _CartPageState extends State<CartPage> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
             blurRadius: 20,
             offset: const Offset(0, -4),
           ),
@@ -2375,8 +2382,8 @@ class _CartPageState extends State<CartPage> {
                               // Calculate store total
                               final storeTotal = items.fold<double>(
                                 0,
-                                (sum, item) =>
-                                    sum +
+                                (acc, item) =>
+                                    acc +
                                     ((item['lineTotal'] as num?)?.toDouble() ??
                                         0),
                               );

@@ -156,7 +156,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ? []
                 : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -169,7 +169,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -268,7 +268,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: _statusColor(status).withOpacity(0.1),
+                                color: _statusColor(status).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
@@ -410,7 +410,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 color: (isStudent
                                         ? AppColors.primary
                                         : AppColors.success)
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Center(
@@ -462,7 +462,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 color: (isStudent
                                         ? AppColors.primary
                                         : AppColors.success)
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -515,7 +515,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: _statusColor(status).withOpacity(0.1),
+        color: _statusColor(status).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -546,3 +546,4 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     }
   }
 }
+

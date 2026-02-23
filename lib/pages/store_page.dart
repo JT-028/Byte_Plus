@@ -186,7 +186,7 @@ class _StorePageState extends State<StorePage> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -297,11 +297,11 @@ class _StorePageState extends State<StorePage> {
           shape: BoxShape.circle,
           color:
               isDark
-                  ? AppColors.surfaceDark.withOpacity(0.9)
-                  : Colors.white.withOpacity(0.95),
+                  ? AppColors.surfaceDark.withValues(alpha: 0.9)
+                  : Colors.white.withValues(alpha: 0.95),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -328,7 +328,7 @@ class _StorePageState extends State<StorePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.12),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -341,7 +341,7 @@ class _StorePageState extends State<StorePage> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -587,7 +587,9 @@ class _StorePageState extends State<StorePage> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                        color: Colors.black.withValues(
+                          alpha: isDark ? 0.2 : 0.08,
+                        ),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -688,7 +690,7 @@ class _StorePageState extends State<StorePage> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -739,7 +741,7 @@ class _StorePageState extends State<StorePage> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.2 : 0.08),
+                  color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -813,7 +815,7 @@ class _StorePageState extends State<StorePage> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: AppColors.primary.withValues(alpha: 0.3),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -891,12 +893,12 @@ class _StorePageState extends State<StorePage> {
 
         final total = docs.fold<double>(
           0,
-          (sum, d) => sum + ((d["lineTotal"] ?? 0) as num).toDouble(),
+          (acc, d) => acc + ((d["lineTotal"] ?? 0) as num).toDouble(),
         );
 
         final itemCount = docs.fold<int>(
           0,
-          (sum, d) => sum + ((d["quantity"] ?? 0) as num).toInt(),
+          (acc, d) => acc + ((d["quantity"] ?? 0) as num).toInt(),
         );
 
         return GestureDetector(
@@ -925,7 +927,7 @@ class _StorePageState extends State<StorePage> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.primary.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, -4),
                 ),
@@ -937,7 +939,7 @@ class _StorePageState extends State<StorePage> {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
@@ -1040,7 +1042,9 @@ class _StickyCategoryBar extends SliverPersistentHeaderDelegate {
                           selected
                               ? [
                                 BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.25),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.25,
+                                  ),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
                                 ),

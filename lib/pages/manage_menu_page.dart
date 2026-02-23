@@ -462,7 +462,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Center(
@@ -622,8 +622,8 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
               decoration: BoxDecoration(
                 color:
                     isAvailable
-                        ? AppColors.success.withOpacity(0.1)
-                        : AppColors.error.withOpacity(0.1),
+                        ? AppColors.success.withValues(alpha: 0.1)
+                        : AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -655,7 +655,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
@@ -853,7 +853,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              value: selectedCategory,
+                              initialValue: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -1044,7 +1044,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              value: selectedCategory,
+                              initialValue: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -1290,7 +1290,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(0.1),
+                                        color: AppColors.error.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Icon(
@@ -1635,7 +1637,9 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                                     child: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(0.1),
+                                        color: AppColors.error.withValues(
+                                          alpha: 0.1,
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: const Icon(

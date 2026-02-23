@@ -71,7 +71,7 @@ class _AdminShellState extends State<AdminShell> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -201,7 +201,7 @@ class _AdminShellState extends State<AdminShell> {
                         Text(
                           data['email']?.toString() ?? _user.email ?? '',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 13,
                           ),
                         ),
@@ -212,7 +212,7 @@ class _AdminShellState extends State<AdminShell> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
+                            color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
@@ -359,7 +359,7 @@ class _AdminShellState extends State<AdminShell> {
         Navigator.pop(context);
       },
       tileColor:
-          isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
@@ -370,7 +370,7 @@ class _AdminShellState extends State<AdminShell> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -403,7 +403,7 @@ class _AdminShellState extends State<AdminShell> {
         decoration: BoxDecoration(
           color:
               isSelected
-                  ? AppColors.primary.withOpacity(0.1)
+                  ? AppColors.primary.withValues(alpha: 0.1)
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -455,7 +455,7 @@ class _AdminShellState extends State<AdminShell> {
         decoration: BoxDecoration(
           color:
               isSelected
-                  ? AppColors.primary.withOpacity(0.1)
+                  ? AppColors.primary.withValues(alpha: 0.1)
                   : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
@@ -560,7 +560,7 @@ class _AdminShellState extends State<AdminShell> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -613,3 +613,4 @@ class _AdminShellState extends State<AdminShell> {
     }
   }
 }
+

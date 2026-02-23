@@ -223,3 +223,4 @@ class ShimmerListItem extends StatelessWidget {
     );
   }
 }
+

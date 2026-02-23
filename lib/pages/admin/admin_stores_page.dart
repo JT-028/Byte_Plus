@@ -196,8 +196,8 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                             decoration: BoxDecoration(
                               color:
                                   isActive
-                                      ? AppColors.success.withOpacity(0.1)
-                                      : AppColors.error.withOpacity(0.1),
+                                      ? AppColors.success.withValues(alpha: 0.1)
+                                      : AppColors.error.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -524,7 +524,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                                     : AppColors.textPrimary,
                           ),
                         ),
-                        activeColor: AppColors.primary,
+                        activeThumbColor: AppColors.primary,
                         contentPadding: EdgeInsets.zero,
                       ),
                       const SizedBox(height: 20),

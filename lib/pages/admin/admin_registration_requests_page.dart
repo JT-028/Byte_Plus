@@ -56,7 +56,7 @@ class _AdminRegistrationRequestsPageState
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -275,7 +275,7 @@ class _AdminRegistrationRequestsPageState
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -412,7 +412,7 @@ class _AdminRegistrationRequestsPageState
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.1 : 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -432,8 +432,8 @@ class _AdminRegistrationRequestsPageState
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        roleColor.withOpacity(0.2),
-                        roleColor.withOpacity(0.1),
+                        roleColor.withValues(alpha: 0.2),
+                        roleColor.withValues(alpha: 0.1),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -473,7 +473,7 @@ class _AdminRegistrationRequestsPageState
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: roleColor.withOpacity(0.15),
+                              color: roleColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -531,7 +531,7 @@ class _AdminRegistrationRequestsPageState
               decoration: BoxDecoration(
                 color:
                     isDark
-                        ? AppColors.backgroundDark.withOpacity(0.5)
+                        ? AppColors.backgroundDark.withValues(alpha: 0.5)
                         : AppColors.background,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -573,7 +573,7 @@ class _AdminRegistrationRequestsPageState
               decoration: BoxDecoration(
                 color:
                     isDark
-                        ? AppColors.backgroundDark.withOpacity(0.5)
+                        ? AppColors.backgroundDark.withValues(alpha: 0.5)
                         : AppColors.background,
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -647,7 +647,7 @@ class _AdminRegistrationRequestsPageState
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: _statusColor(status).withOpacity(0.15),
+                      color: _statusColor(status).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -869,3 +869,4 @@ class _AdminRegistrationRequestsPageState
     );
   }
 }
+

@@ -452,7 +452,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                 ? []
                 : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -840,7 +840,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -1007,7 +1007,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
 
         final subtotal = receiptItems.fold<double>(
           0.0,
-          (sum, item) => sum + item.price,
+          (acc, item) => acc + item.price,
         );
 
         // Calculate 12% VAT (Philippines standard)
@@ -1123,7 +1123,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
@@ -1185,7 +1185,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
                             decoration: BoxDecoration(
                               color:
                                   isSelected
-                                      ? AppColors.error.withOpacity(0.1)
+                                      ? AppColors.error.withValues(alpha: 0.1)
                                       : isDark
                                       ? AppColors.backgroundDark
                                       : Colors.grey.shade100,

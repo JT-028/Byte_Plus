@@ -84,7 +84,7 @@ class AppModalDialog extends StatelessWidget {
       context: context,
       barrierDismissible: barrierDismissible,
       barrierLabel: 'Dismiss',
-      barrierColor: Colors.black.withOpacity(0.6),
+      barrierColor: Colors.black.withValues(alpha: 0.6),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
         return AppModalDialog(
@@ -240,7 +240,7 @@ class AppModalDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -308,7 +308,7 @@ class AppModalDialog extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: _getIconBackgroundColor().withOpacity(0.3),
+            color: _getIconBackgroundColor().withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -420,3 +420,4 @@ class AppModalDialog extends StatelessWidget {
     return Column(mainAxisSize: MainAxisSize.min, children: buttons);
   }
 }
+

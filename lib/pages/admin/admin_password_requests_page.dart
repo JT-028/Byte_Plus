@@ -250,7 +250,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _statusColor(status).withOpacity(0.1),
+                  color: _statusColor(status).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -297,7 +297,7 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: _statusColor(status).withOpacity(0.1),
+                  color: _statusColor(status).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -575,3 +575,4 @@ class _AdminPasswordRequestsPageState extends State<AdminPasswordRequestsPage> {
     }
   }
 }
+

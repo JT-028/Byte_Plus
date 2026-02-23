@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -40,7 +40,7 @@ class LocationService {
         desiredAccuracy: LocationAccuracy.high,
       );
     } catch (e) {
-      print("⚠️ Error getting position: $e");
+      debugPrint("⚠️ Error getting position: $e");
       return null;
     }
   }
@@ -55,3 +55,4 @@ class LocationService {
     return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
   }
 }
+

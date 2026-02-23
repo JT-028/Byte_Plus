@@ -159,7 +159,7 @@ class _MerchantShellState extends State<MerchantShell> {
                       height: 32,
                       margin: const EdgeInsets.only(right: 10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -334,7 +334,7 @@ class _MerchantShellState extends State<MerchantShell> {
                                   _user.email ??
                                   '',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 fontSize: 13,
                               ),
                             ),
@@ -345,7 +345,7 @@ class _MerchantShellState extends State<MerchantShell> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -521,7 +521,7 @@ class _MerchantShellState extends State<MerchantShell> {
         Navigator.pop(context);
       },
       tileColor:
-          isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          isSelected ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
@@ -560,7 +560,7 @@ class _MerchantShellState extends State<MerchantShell> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -662,3 +662,4 @@ class _MerchantShellState extends State<MerchantShell> {
     );
   }
 }
+

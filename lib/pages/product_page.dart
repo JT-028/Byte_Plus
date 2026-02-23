@@ -405,7 +405,7 @@ class _ProductPageState extends State<ProductPage> {
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -766,7 +766,7 @@ class _ProductPageState extends State<ProductPage> {
                           ? AppColors.surfaceVariantDark
                           : Colors.grey.shade300)
                       : (isDark
-                          ? AppColors.primary.withOpacity(0.2)
+                          ? AppColors.primary.withValues(alpha: 0.2)
                           : Colors.blue.shade50),
               borderRadius: BorderRadius.circular(12),
             ),
