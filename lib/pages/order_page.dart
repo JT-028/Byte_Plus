@@ -2,6 +2,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/app_modal_dialog.dart';
@@ -194,7 +195,25 @@ class _OrdersPageState extends State<OrdersPage> {
     final total = data["total"] ?? 0;
     final status = data["status"] ?? '';
     final orderId = data["orderId"] ?? '';
-    final pickupTime = data["pickupTime"];
+    final rawPickupTime = data["pickupTime"];
+
+    // Format pickup time nicely
+    String? pickupTime;
+    if (rawPickupTime != null) {
+      try {
+        DateTime dt;
+        if (rawPickupTime is Timestamp) {
+          dt = rawPickupTime.toDate();
+        } else if (rawPickupTime is String) {
+          dt = DateTime.parse(rawPickupTime);
+        } else {
+          dt = DateTime.now();
+        }
+        pickupTime = DateFormat('h:mm a').format(dt);
+      } catch (_) {
+        pickupTime = rawPickupTime.toString();
+      }
+    }
 
     // Generate short pickup number from orderId (last 3-4 chars uppercase)
     final pickupNumber =
@@ -297,20 +316,19 @@ class _OrdersPageState extends State<OrdersPage> {
                           color: isDark ? AppColors.primaryLight : primaryBlue,
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            isReady
-                                ? "Ready for pickup"
-                                : "Estimated pickup time",
-                            style: TextStyle(
-                              fontSize: 13,
-                              color:
-                                  isDark
-                                      ? AppColors.textSecondaryDark
-                                      : Colors.grey.shade600,
-                            ),
+                        Text(
+                          isReady
+                              ? "Ready for pickup"
+                              : "Estimated pickup time",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color:
+                                isDark
+                                    ? AppColors.textSecondaryDark
+                                    : Colors.grey.shade600,
                           ),
                         ),
+                        const Spacer(),
                         Text(
                           pickupTime ?? "TBD",
                           style: TextStyle(
