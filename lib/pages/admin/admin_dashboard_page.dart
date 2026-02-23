@@ -342,7 +342,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pending Password Requests',
+          'Pending Registration Requests',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -353,7 +353,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         StreamBuilder<QuerySnapshot>(
           stream:
               FirebaseFirestore.instance
-                  .collection('passwordRequests')
+                  .collection('registrationRequests')
                   .where('status', isEqualTo: 'pending')
                   .orderBy('createdAt', descending: true)
                   .limit(3)
@@ -381,8 +381,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     docs.asMap().entries.map((entry) {
                       final i = entry.key;
                       final data = entry.value.data() as Map<String, dynamic>;
-                      final email = data['email'] ?? 'Unknown';
-                      final reason = data['reason'] ?? '';
+                      final name = data['name'] ?? 'Unknown';
+                      final email = data['email'] ?? '';
+                      final role = data['role'] ?? 'student';
+                      final isStudent = role == 'student';
 
                       return Container(
                         padding: const EdgeInsets.all(14),
@@ -405,13 +407,19 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.warning.withOpacity(0.1),
+                                color: (isStudent
+                                        ? AppColors.primary
+                                        : AppColors.success)
+                                    .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Center(
+                              child: Center(
                                 child: Icon(
-                                  Iconsax.key,
-                                  color: AppColors.warning,
+                                  isStudent ? Iconsax.user : Iconsax.shop,
+                                  color:
+                                      isStudent
+                                          ? AppColors.primary
+                                          : AppColors.success,
                                   size: 18,
                                 ),
                               ),
@@ -422,7 +430,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    email,
+                                    name,
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
@@ -432,17 +440,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                               : AppColors.textPrimary,
                                     ),
                                   ),
-                                  if (reason.isNotEmpty)
-                                    Text(
-                                      reason,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            isDark
-                                                ? AppColors.textSecondaryDark
-                                                : AppColors.textSecondary,
-                                      ),
+                                  Text(
+                                    email,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color:
+                                          isDark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondary,
                                     ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -452,15 +459,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.warning.withOpacity(0.1),
+                                color: (isStudent
+                                        ? AppColors.primary
+                                        : AppColors.success)
+                                    .withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
-                                'Pending',
+                              child: Text(
+                                isStudent ? 'Student' : 'Merchant',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.warning,
+                                  color:
+                                      isStudent
+                                          ? AppColors.primary
+                                          : AppColors.success,
                                 ),
                               ),
                             ),
