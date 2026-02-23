@@ -696,6 +696,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // DIALOG: Add Category
   // ============================================
+  // ignore: unused_element
   void _showAddCategoryDialog(bool isDark) {
     final nameController = TextEditingController();
     final pageContext = context;
@@ -779,6 +780,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // DIALOG: Add Product
   // ============================================
+  // ignore: unused_element
   void _showAddProductDialog(bool isDark) {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
@@ -851,7 +853,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              initialValue: selectedCategory,
+                              value: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -938,6 +940,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // DIALOG: Edit Product
   // ============================================
+  // ignore: unused_element
   void _showEditProductDialog(
     String productId,
     Map<String, dynamic> existing,
@@ -1041,7 +1044,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
                           builder: (context, snap) {
                             final cats = snap.data?.docs ?? [];
                             return DropdownButtonFormField<String>(
-                              initialValue: selectedCategory,
+                              value: selectedCategory,
                               decoration: _dropdownDecoration(
                                 'Category',
                                 Iconsax.folder,
@@ -1125,6 +1128,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // DIALOG: Add Variation
   // ============================================
+  // ignore: unused_element
   void _showAddVariationDialog(bool isDark) {
     final nameController = TextEditingController();
     final List<Map<String, TextEditingController>> options = [
@@ -1416,6 +1420,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
   // ============================================
   // DIALOG: Add Choice Group
   // ============================================
+  // ignore: unused_element
   void _showAddChoiceGroupDialog(bool isDark) {
     final nameController = TextEditingController();
     bool isRequired = false;
@@ -1900,6 +1905,7 @@ class _ManageMenuPageState extends State<ManageMenuPage> {
     );
   }
 
+  // ignore: unused_element
   Future<void> _renameCategory(
     String categoryId,
     String currentName,

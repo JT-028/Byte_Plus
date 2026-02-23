@@ -119,6 +119,7 @@ class _BounceTapWrapperState extends State<BounceTapWrapper>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  // ignore: unused_field - reserved for gesture state tracking
   bool _isPressed = false;
 
   @override

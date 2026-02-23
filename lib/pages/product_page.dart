@@ -556,6 +556,7 @@ class _ProductPageState extends State<ProductPage> {
                 final v = variations[index] as Map<String, dynamic>;
                 final name = v['name']?.toString() ?? '';
                 final price = ((v['price'] as num?) ?? 0).toDouble();
+                // ignore: unused_local_variable - available for styling selected variation
                 final isSelected = _selectedVariationIndex == index;
 
                 return RadioListTile<int>(

@@ -27,6 +27,7 @@ class MerchantShell extends StatefulWidget {
 class _MerchantShellState extends State<MerchantShell> {
   int selectedNav = 0;
   final _auth = FirebaseAuth.instance;
+  // ignore: unused_field
   final ThermalPrinterService _printerService = ThermalPrinterService();
 
   User get _user => _auth.currentUser!;
@@ -259,14 +260,14 @@ class _MerchantShellState extends State<MerchantShell> {
                       userSnap.data?.data() as Map<String, dynamic>? ?? {};
                   final storeId = userData['storeId']?.toString() ?? '';
 
-                  return FutureBuilder<DocumentSnapshot>(
+                  return FutureBuilder<DocumentSnapshot?>(
                     future:
                         storeId.isNotEmpty
                             ? FirebaseFirestore.instance
                                 .collection('stores')
                                 .doc(storeId)
                                 .get()
-                            : Future.value(null),
+                            : Future<DocumentSnapshot?>.value(null),
                     builder: (context, storeSnap) {
                       final storeData =
                           storeSnap.data?.data() as Map<String, dynamic>? ?? {};

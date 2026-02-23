@@ -507,7 +507,7 @@ class _EditStorePageState extends State<EditStorePage> {
                       : AppColors.textSecondary,
             ),
           ),
-          activeThumbColor: AppColors.primary,
+          activeColor: AppColors.primary,
           contentPadding: EdgeInsets.zero,
         ),
       ],

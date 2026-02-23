@@ -119,6 +119,7 @@ class _MerchantOrdersPageState extends State<MerchantOrdersPage> {
     );
   }
 
+  // ignore: unused_element
   Widget _topHeader(bool isDark, String storeId) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),

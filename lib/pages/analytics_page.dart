@@ -343,6 +343,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     final totalSales = summary?.totalItems ?? 0;
     final totalOrders = summary?.totalOrders ?? 0;
     final totalProducts = productStats?['totalProducts'] ?? 0;
+    // ignore: unused_local_variable - reserved for future "Out of Stock" stat card
     final outOfStock = productStats?['outOfStock'] ?? 0;
 
     debugPrint('[AnalyticsPage] Building stats grid:');

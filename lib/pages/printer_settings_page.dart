@@ -22,7 +22,9 @@ class _PrinterSettingsPageState extends State<PrinterSettingsPage> {
 
   List<DiscoveredPrinter> _discoveredPrinters = [];
   bool _isScanning = false;
+  // ignore: unused_field - reserved for WiFi printer connection feature
   String? _wifiIp;
+  // ignore: unused_field - reserved for WiFi printer connection feature
   final int _wifiPort = 9100;
   StreamSubscription<PrinterStatus>? _statusSubscription;
   StreamSubscription<List<DiscoveredPrinter>>? _scanSubscription;

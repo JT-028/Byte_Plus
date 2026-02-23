@@ -340,6 +340,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     );
   }
 
+  // ignore: unused_element
   void _showAddStoreDialog(bool isDark) {
     final nameController = TextEditingController();
     final descController = TextEditingController();
@@ -439,6 +440,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
     );
   }
 
+  // ignore: unused_element
   void _showEditStoreDialog(
     String storeId,
     Map<String, dynamic> data,
@@ -522,7 +524,7 @@ class _AdminStoresPageState extends State<AdminStoresPage> {
                                     : AppColors.textPrimary,
                           ),
                         ),
-                        activeThumbColor: AppColors.primary,
+                        activeColor: AppColors.primary,
                         contentPadding: EdgeInsets.zero,
                       ),
                       const SizedBox(height: 20),
