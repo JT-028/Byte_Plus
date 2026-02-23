@@ -47,6 +47,8 @@ app.*.map.json
 # Firebase Functions
 functions/node_modules/
 functions/.firebase/
+functions/.runtimeconfig.json
+functions/lib/
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
@@ -57,18 +59,86 @@ firebase-debug.*.log
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
 /ios/firebase_app_id_file.json
+/web/firebase-config.js
 
-# Documentation and notes (personal/generated)
-*.md
-NOTIFICATIONS.md
+# Cloud Functions environment variables
+functions/.env
+functions/.env.*
+functions/serviceAccountKey.json
+functions/config.json
 
-# Debug/test files
-*.log
-*.png
-debug_*.dart
-delete_*.dart
+# API Keys and Credentials
+**/api_keys.dart
+**/secrets.dart
+**/credentials.json
+serviceAccount*.json
 
-# Local configuration
-*.local
+# Environment variables
 .env
 .env.*
+.env.local
+.env.development
+.env.production
+.env.staging
+
+# Documentation and notes (personal/generated)
+# Keep README.md but ignore other docs
+NOTES.md
+TODO.md
+PRIVATE*.md
+INTERNAL*.md
+**/NOTES.txt
+**/TODO.txt
+
+# Debug/test files
+debug_*.dart
+delete_*.dart
+test_*.dart
+dummy_*.dart
+
+# Database exports and backups
+*.db
+*.sqlite
+*.sqlite3
+firestore-export/
+firestore-backup/
+*.backup
+
+# Local configuration and settings
+*.local
+local.properties
+keystore.properties
+key.properties
+
+# User-specific files
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Images and media (if sensitive)
+# Uncomment if you want to ignore uploaded images
+# assets/uploads/
+# **/user_uploads/
+
+# Cloudinary credentials (if stored locally)
+cloudinary_config.dart
+
+# Printer configuration (may contain device IDs)
+printer_config.json
+
+# Analytics and tracking IDs
+analytics_config.dart
+
+# Admin credentials
+admin_users.json
+
+# Password reset tokens
+password_reset_tokens.json
+
+# Geofence sensitive data (if contains exact coordinates)
+# geofence_config.json
